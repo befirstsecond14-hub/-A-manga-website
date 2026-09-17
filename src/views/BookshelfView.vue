@@ -1,33 +1,12 @@
 <script setup lang="ts">
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
+import { useBookshelfStore } from '@/stores/bookshelf'
 
 const router = useRouter()
-const authStore = useAuthStore()
 
-const mangaList = [
-  {
-    id: 1,
-    title: 'One Piece',
-    cover:
-      'https://images.unsplash.com/photo-1613376023733-6897c85e8b9c?w=500',
-    chapter: 100,
-  },
-  {
-    id: 2,
-    title: 'Naruto',
-    cover:
-      'https://images.unsplash.com/photo-1612036782180-6f0b6cd846fe?w=500',
-    chapter: 50,
-  },
-  {
-    id: 3,
-    title: 'Demon Slayer',
-    cover:
-      'https://images.unsplash.com/photo-1607604276583-eef5b0765f2a?w=500',
-    chapter: 30,
-  },
-]
+const authStore = useAuthStore()
+const bookshelfStore = useBookshelfStore()
 
 function goHome() {
   router.push('/')
@@ -37,8 +16,29 @@ function openManga(id: number) {
   router.push(`/manga/${id}`)
 }
 
-function continueReading(id: number, chapter: number) {
-  router.push(`/manga/${id}/chapter/${chapter}`)
+function continueReading(
+  id: number,
+  chapter: number,
+) {
+  router.push(
+    `/manga/${id}/chapter/${chapter}`,
+  )
+}
+
+function removeFromBookshelf(id: number) {
+  const manga = bookshelfStore.mangaList.find(
+    (item) => item.id === id,
+  )
+
+  if (!manga) return
+
+  const confirmed = confirm(
+    `ต้องการนำ "${manga.title}" ออกจากชั้นหนังสือใช่หรือไม่?`,
+  )
+
+  if (!confirmed) return
+
+  bookshelfStore.removeFromBookshelf(id)
 }
 
 function logout() {
@@ -49,109 +49,156 @@ function logout() {
 
 <template>
   <div class="bookshelf-page">
-
-    <!-- Header -->
-    <header class="header">
-      <div class="header-inner">
-
-        <div class="logo" @click="goHome">
-          MangaVerse
-        </div>
-
-        <nav>
-          <button @click="goHome">
-            หน้าหลัก
-          </button>
-
-          <button class="active">
-            ชั้นหนังสือ
-          </button>
-        </nav>
-
-      </div>
-    </header>
-
     <!-- Main -->
-    <main class="container">
-
+    <main class="main-content">
+      <!-- Page Title -->
       <div class="page-title">
-        <h1>ชั้นหนังสือของฉัน</h1>
+        <p class="section-label">
+          MY BOOKSHELF
+        </p>
 
-        <p>
+        <h1>
+          ชั้นหนังสือของฉัน
+        </h1>
+
+        <p class="subtitle">
           มังงะที่คุณบันทึกไว้
         </p>
       </div>
 
       <!-- User Info -->
       <div class="user-info">
+        <div class="user-text">
+          <span class="welcome">
+            สวัสดี
+          </span>
 
-        <span>
-          สวัสดี {{ authStore.username }}
-        </span>
+          <strong>
+            {{ authStore.username }}
+          </strong>
+        </div>
 
-        <button @click="logout">
+        <button
+          type="button"
+          class="logout-button"
+          @click="logout"
+        >
           ออกจากระบบ
         </button>
-
       </div>
 
-      <!-- Manga List -->
-      <section class="manga-grid">
+      <!-- Empty -->
+      <section
+        v-if="bookshelfStore.mangaList.length === 0"
+        class="empty-bookshelf"
+      >
+        <div class="empty-icon">
+          +
+        </div>
 
+        <h2>
+          ชั้นหนังสือยังว่าง
+        </h2>
+
+        <p>
+          ไปเลือกมังงะที่สนใจแล้วเพิ่มเข้าชั้นหนังสือได้เลย
+        </p>
+
+        <button
+          type="button"
+          class="home-button"
+          @click="goHome"
+        >
+          ไปเลือกมังงะ
+        </button>
+      </section>
+
+      <!-- Manga List -->
+      <section
+        v-else
+        class="manga-grid"
+      >
         <article
-          v-for="manga in mangaList"
+          v-for="manga in bookshelfStore.mangaList"
           :key="manga.id"
           class="manga-card"
         >
+          <!-- Cover -->
+          <button
+            type="button"
+            class="cover-button"
+            @click="openManga(manga.id)"
+          >
+            <div class="cover-wrapper">
+              <img
+                :src="manga.cover"
+                :alt="manga.title"
+                class="manga-cover"
+              />
+            </div>
+          </button>
 
-          <img
-            :src="manga.cover"
-            :alt="manga.title"
-          />
-
+          <!-- Info -->
           <div class="manga-info">
-
             <h2>
               {{ manga.title }}
             </h2>
 
             <p>
-              อ่านล่าสุดถึงตอนที่ {{ manga.chapter }}
+              อ่านล่าสุดถึงตอนที่
+              {{ manga.chapter }}
             </p>
 
+            <!-- Buttons -->
             <div class="card-actions">
-
               <button
+                type="button"
                 class="continue-button"
-                @click="continueReading(manga.id, manga.chapter)"
+                @click="
+                  continueReading(
+                    manga.id,
+                    manga.chapter,
+                  )
+                "
               >
                 อ่านต่อ
               </button>
 
               <button
+                type="button"
                 class="detail-button"
                 @click="openManga(manga.id)"
               >
                 รายละเอียด
               </button>
 
+              <button
+                type="button"
+                class="remove-button"
+                @click="
+                  removeFromBookshelf(manga.id)
+                "
+              >
+                เอาออก
+              </button>
             </div>
-
           </div>
-
         </article>
-
       </section>
-
     </main>
 
     <!-- Footer -->
     <footer class="footer">
-      <p>
-        © 2026 MangaVerse
-      </p>
-    </footer>
+      <div class="footer-inner">
+        <div class="footer-logo">
+          Manga<span>Verse</span>
+        </div>
 
+        <p>
+          MangaVerse — Online Manga Reading System
+        </p>
+      </div>
+    </footer>
   </div>
 </template>
 
@@ -160,288 +207,462 @@ function logout() {
   box-sizing: border-box;
 }
 
+/* ========================================
+   Page
+======================================== */
+
 .bookshelf-page {
   min-height: 100vh;
-
   display: flex;
   flex-direction: column;
-
-  background: #f5f5f5;
+  background: #f7f7f8;
+  color: #18181b;
 }
 
-/* Header */
+/* ========================================
+   Main
+======================================== */
 
-.header {
-  background: #ffffff;
-
-  border-bottom: 1px solid #e5e5e5;
-}
-
-.header-inner {
-  max-width: 1200px;
-
+.main-content {
+  width: 86%;
+  max-width: 1300px;
   margin: 0 auto;
-
-  padding: 18px 24px;
-
-  display: flex;
-
-  align-items: center;
-  justify-content: space-between;
-}
-
-.logo {
-  font-size: 24px;
-
-  font-weight: 800;
-
-  color: #222;
-
-  cursor: pointer;
-}
-
-nav {
-  display: flex;
-
-  gap: 8px;
-}
-
-nav button {
-  border: none;
-
-  background: transparent;
-
-  padding: 8px 14px;
-
-  color: #666;
-
-  font-size: 14px;
-
-  cursor: pointer;
-}
-
-nav button:hover,
-nav button.active {
-  color: #111;
-}
-
-/* Main */
-
-.container {
-  width: 100%;
-
-  max-width: 1200px;
-
-  margin: 0 auto;
-
-  padding: 45px 24px;
-
+  padding: 50px 0 70px;
   flex: 1;
 }
 
+/* ========================================
+   Page Title
+======================================== */
+
 .page-title {
-  margin-bottom: 20px;
+  margin-bottom: 25px;
+}
+
+.section-label {
+  margin: 0 0 6px;
+  color: #7c3aed;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
 }
 
 .page-title h1 {
   margin: 0 0 8px;
-
-  color: #222;
-
-  font-size: 30px;
+  font-size: 32px;
+  font-weight: 800;
+  line-height: 1.2;
 }
 
-.page-title p {
+.subtitle {
   margin: 0;
-
-  color: #777;
-
-  font-size: 15px;
-}
-
-/* User Info */
-
-.user-info {
-  margin-bottom: 25px;
-
-  padding: 15px 18px;
-
-  background: #ffffff;
-
-  border-radius: 10px;
-
-  display: flex;
-
-  align-items: center;
-
-  justify-content: space-between;
-
-  color: #555;
-
+  color: #777777;
   font-size: 14px;
 }
 
-.user-info button {
-  padding: 8px 14px;
+/* ========================================
+   User Info
+======================================== */
 
-  border: 1px solid #ddd;
-
-  border-radius: 6px;
-
+.user-info {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 30px;
+  padding: 16px 20px;
   background: #ffffff;
+  border: 1px solid #e5e5e5;
+  border-radius: 10px;
+}
 
-  color: #333;
+.user-text {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #555555;
+  font-size: 14px;
+}
 
+.user-text strong {
+  color: #18181b;
+  font-weight: 700;
+}
+
+.welcome {
+  color: #777777;
+}
+
+/* ========================================
+   Logout
+======================================== */
+
+.logout-button {
+  padding: 8px 14px;
+  border: 1px solid #dddddd;
+  border-radius: 7px;
+  background: #ffffff;
+  color: #555555;
+  font-size: 13px;
   cursor: pointer;
+  transition:
+    background 0.2s ease,
+    border-color 0.2s ease,
+    color 0.2s ease;
 }
 
-.user-info button:hover {
+.logout-button:hover {
+  border-color: #d4d4d8;
   background: #f5f5f5;
+  color: #d32f2f;
 }
 
-/* Grid */
+/* ========================================
+   Manga Grid
+======================================== */
 
 .manga-grid {
   display: grid;
-
-  grid-template-columns: repeat(3, 1fr);
-
-  gap: 24px;
+  grid-template-columns:
+    repeat(3, minmax(0, 1fr));
+  gap: 22px;
 }
+
+/* ========================================
+   Manga Card
+======================================== */
 
 .manga-card {
   overflow: hidden;
-
+  display: flex;
+  flex-direction: column;
   background: #ffffff;
-
-  border-radius: 14px;
-
-  box-shadow: 0 5px 20px rgba(0, 0, 0, 0.06);
+  border: 1px solid #e5e5e5;
+  border-radius: 10px;
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease;
 }
 
-.manga-card img {
-  display: block;
+.manga-card:hover {
+  transform: translateY(-4px);
+  box-shadow:
+    0 10px 25px rgba(0, 0, 0, 0.08);
+}
 
+/* ========================================
+   Cover
+======================================== */
+
+.cover-button {
   width: 100%;
-
-  height: 350px;
-
-  object-fit: cover;
+  padding: 0;
+  border: none;
+  background: transparent;
+  cursor: pointer;
 }
+
+.cover-wrapper {
+  width: 100%;
+  aspect-ratio: 3 / 4;
+  overflow: hidden;
+  background: #eeeeee;
+}
+
+.manga-cover {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: cover;
+  transition:
+    transform 0.3s ease;
+}
+
+.cover-button:hover .manga-cover {
+  transform: scale(1.03);
+}
+
+/* ========================================
+   Manga Info
+======================================== */
 
 .manga-info {
-  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  padding: 18px;
 }
 
 .manga-info h2 {
   margin: 0 0 8px;
-
-  color: #222;
-
-  font-size: 20px;
+  color: #18181b;
+  font-size: 19px;
+  font-weight: 700;
 }
 
 .manga-info p {
   margin: 0 0 18px;
-
-  color: #777;
-
-  font-size: 14px;
+  color: #777777;
+  font-size: 13px;
+  line-height: 1.5;
 }
 
-/* Buttons */
+/* ========================================
+   Card Actions
+======================================== */
 
 .card-actions {
   display: flex;
-
-  gap: 10px;
+  gap: 7px;
+  margin-top: auto;
 }
 
 .card-actions button {
   flex: 1;
-
-  padding: 11px;
-
+  min-height: 38px;
   border-radius: 7px;
-
-  font-size: 14px;
-
+  font-size: 12px;
+  font-weight: 600;
   cursor: pointer;
+  transition:
+    background 0.2s ease,
+    border-color 0.2s ease,
+    color 0.2s ease;
 }
+
+/* ========================================
+   Continue
+======================================== */
 
 .continue-button {
   border: none;
-
-  background: #222;
-
+  background: #7c3aed;
   color: #ffffff;
 }
 
 .continue-button:hover {
-  background: #444;
+  background: #6d28d9;
 }
 
+/* ========================================
+   Detail
+======================================== */
+
 .detail-button {
-  border: 1px solid #ddd;
-
+  border: 1px solid #d4d4d8;
   background: #ffffff;
-
-  color: #333;
+  color: #555555;
 }
 
 .detail-button:hover {
-  background: #f5f5f5;
+  border-color: #7c3aed;
+  color: #7c3aed;
 }
 
-/* Footer */
+/* ========================================
+   Remove
+======================================== */
+
+.remove-button {
+  border: 1px solid #f1d1d1;
+  background: #ffffff;
+  color: #d32f2f;
+}
+
+.remove-button:hover {
+  border-color: #d32f2f;
+  background: #fff5f5;
+}
+
+/* ========================================
+   Empty
+======================================== */
+
+.empty-bookshelf {
+  padding: 70px 25px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  background: #ffffff;
+  border: 1px solid #e5e5e5;
+  border-radius: 12px;
+}
+
+.empty-icon {
+  width: 60px;
+  height: 60px;
+  margin-bottom: 18px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: #f1ecff;
+  color: #7c3aed;
+  font-size: 30px;
+  font-weight: 400;
+}
+
+.empty-bookshelf h2 {
+  margin: 0 0 8px;
+  font-size: 22px;
+}
+
+.empty-bookshelf p {
+  margin: 0 0 22px;
+  color: #888888;
+  font-size: 14px;
+}
+
+.home-button {
+  min-height: 42px;
+  padding: 0 20px;
+  border: none;
+  border-radius: 8px;
+  background: #7c3aed;
+  color: #ffffff;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.home-button:hover {
+  background: #6d28d9;
+}
+
+/* ========================================
+   Footer
+======================================== */
 
 .footer {
-  padding: 20px;
+  margin-top: 20px;
+  padding: 35px 0;
+  background: #18181b;
+  color: #aaaaaa;
+}
 
-  background: #ffffff;
+.footer-inner {
+  width: 86%;
+  max-width: 1300px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
 
-  text-align: center;
+.footer-logo {
+  color: #ffffff;
+  font-size: 25px;
+  font-weight: 800;
+}
 
-  color: #888;
+.footer-logo span {
+  color: #7c3aed;
+}
 
+.footer p {
+  margin: 0;
   font-size: 13px;
 }
 
-/* Mobile */
+/* ========================================
+   Responsive
+======================================== */
 
-@media (max-width: 800px) {
+@media (max-width: 1000px) {
+  .main-content,
+  .footer-inner {
+    width: 92%;
+  }
+
   .manga-grid {
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns:
+      repeat(2, minmax(0, 1fr));
+    gap: 18px;
   }
 }
 
-@media (max-width: 550px) {
-  .header-inner {
-    padding: 15px 18px;
+@media (max-width: 700px) {
+  .main-content {
+    width: 92%;
+    padding-top: 35px;
   }
 
-  .logo {
-    font-size: 21px;
-  }
-
-  .container {
-    padding: 30px 16px;
+  .page-title h1 {
+    font-size: 28px;
   }
 
   .manga-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns:
+      repeat(2, minmax(0, 1fr));
+    gap: 12px;
   }
 
-  .manga-card img {
-    height: 400px;
+  .manga-info {
+    padding: 13px;
+  }
+
+  .manga-info h2 {
+    font-size: 16px;
+  }
+
+  .manga-info p {
+    font-size: 12px;
+  }
+
+  .card-actions {
+    flex-direction: column;
+    gap: 7px;
+  }
+
+  .card-actions button {
+    width: 100%;
   }
 
   .user-info {
-    flex-direction: column;
-
     align-items: flex-start;
-
+    flex-direction: column;
     gap: 12px;
+  }
+
+  .logout-button {
+    width: 100%;
+  }
+}
+
+@media (max-width: 420px) {
+  .main-content {
+    width: 94%;
+    padding-top: 30px;
+  }
+
+  .page-title h1 {
+    font-size: 25px;
+  }
+
+  .manga-grid {
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+
+  .manga-info {
+    padding: 11px;
+  }
+
+  .manga-info h2 {
+    font-size: 15px;
+  }
+
+  .manga-info p {
+    font-size: 11px;
+  }
+
+  .card-actions button {
+    min-height: 36px;
+    font-size: 12px;
+  }
+
+  .footer-inner {
+    width: 94%;
   }
 }
 </style>

@@ -13,87 +13,74 @@ const errorMessage = ref('')
 function login() {
   errorMessage.value = ''
 
-  // ตรวจสอบว่ากรอกข้อมูลครบหรือไม่
+  // ตรวจสอบข้อมูล
   if (!email.value || !password.value) {
-    errorMessage.value = 'กรุณากรอกอีเมลและรหัสผ่าน'
+    errorMessage.value =
+      'กรุณากรอกอีเมลและรหัสผ่าน'
+
     return
   }
 
-  // จำลองการเข้าสู่ระบบ
-  const username = email.value.split('@')[0] || 'User'
+  // จำลองชื่อผู้ใช้
+  const username =
+    email.value.split('@')[0] || 'User'
 
-  // ตรวจสอบสิทธิ์ของผู้ใช้
-  // ถ้าใช้อีเมลนี้ จะถือว่าเป็น Admin
+  // ตรวจสอบสิทธิ์
+  // admin@mangaverse.com = Admin
+  // อีเมลอื่น = User ทั่วไป
   const role =
     email.value === 'admin@mangaverse.com'
       ? 'admin'
       : 'user'
 
-  // บันทึกข้อมูลการเข้าสู่ระบบ
+  // บันทึกข้อมูล Login
   authStore.login(
     username,
     email.value,
     role,
   )
 
-  // ถ้าเป็น Admin → ไปหน้า Admin
+  // Admin → ไปหน้า Admin
   if (role === 'admin') {
     router.push('/admin')
     return
   }
 
-  // ถ้าเป็น User ทั่วไป → ไปหน้าหลัก
+  // User ทั่วไป → ไปหน้าหลัก
   router.push('/')
 }
 
 function goRegister() {
   router.push('/register')
 }
-
-function goHome() {
-  router.push('/')
-}
 </script>
 
+
 <template>
+
   <div class="login-page">
 
-    <!-- Header -->
-    <header class="header">
-      <div class="header-inner">
-
-        <div
-          class="logo"
-          @click="goHome"
-        >
-          MangaVerse
-        </div>
-
-        <button
-          class="back-button"
-          @click="goHome"
-        >
-          กลับหน้าหลัก
-        </button>
-
-      </div>
-    </header>
-
     <!-- Login -->
+
     <main class="login-container">
 
       <div class="login-card">
 
-        <h1>เข้าสู่ระบบ</h1>
+        <h1>
+          เข้าสู่ระบบ
+        </h1>
+
 
         <p class="subtitle">
           เข้าสู่ระบบเพื่อใช้งาน Bookshelf
           และฟีเจอร์สำหรับสมาชิก
         </p>
 
+
         <form @submit.prevent="login">
 
           <!-- Email -->
+
           <div class="form-group">
 
             <label for="email">
@@ -109,7 +96,9 @@ function goHome() {
 
           </div>
 
+
           <!-- Password -->
+
           <div class="form-group">
 
             <label for="password">
@@ -125,7 +114,9 @@ function goHome() {
 
           </div>
 
+
           <!-- Error -->
+
           <p
             v-if="errorMessage"
             class="error-message"
@@ -133,7 +124,9 @@ function goHome() {
             {{ errorMessage }}
           </p>
 
+
           <!-- Login Button -->
+
           <button
             type="submit"
             class="login-button"
@@ -143,7 +136,9 @@ function goHome() {
 
         </form>
 
+
         <!-- Register -->
+
         <div class="register-section">
 
           <span>
@@ -163,205 +158,283 @@ function goHome() {
 
     </main>
 
+
     <!-- Footer -->
+
     <footer class="footer">
+
       <p>
         © 2026 MangaVerse
       </p>
+
     </footer>
 
   </div>
+
 </template>
 
+
 <style scoped>
+
 * {
   box-sizing: border-box;
 }
 
+
+/* =========================
+   Page
+========================= */
+
 .login-page {
-  min-height: 100vh;
+  min-height: calc(100vh - 72px);
+
   display: flex;
+
   flex-direction: column;
+
   background: #f5f5f5;
 }
 
-/* Header */
-.header {
-  background: #ffffff;
-  border-bottom: 1px solid #e5e5e5;
-}
 
-.header-inner {
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 18px 24px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
+/* =========================
+   Main
+========================= */
 
-.logo {
-  font-size: 24px;
-  font-weight: 800;
-  color: #222;
-  cursor: pointer;
-}
-
-.back-button {
-  border: none;
-  background: transparent;
-  color: #555;
-  font-size: 14px;
-  cursor: pointer;
-}
-
-.back-button:hover {
-  color: #111;
-}
-
-/* Main */
 .login-container {
   flex: 1;
+
   display: flex;
+
   justify-content: center;
+
   align-items: center;
+
   padding: 50px 20px;
 }
 
+
+/* =========================
+   Login Card
+========================= */
+
 .login-card {
   width: 100%;
+
   max-width: 430px;
+
   background: #ffffff;
+
   padding: 40px;
+
   border-radius: 16px;
-  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.08);
+
+  box-shadow:
+    0 8px 30px rgba(0, 0, 0, 0.08);
 }
+
 
 .login-card h1 {
   margin: 0;
+
   text-align: center;
+
   font-size: 30px;
+
   color: #222;
 }
 
+
+/* =========================
+   Subtitle
+========================= */
+
 .subtitle {
   margin: 12px 0 30px;
+
   text-align: center;
+
   color: #777;
+
   font-size: 14px;
+
   line-height: 1.6;
 }
 
-/* Form */
+
+/* =========================
+   Form
+========================= */
+
 .form-group {
   margin-bottom: 20px;
 }
 
+
 .form-group label {
   display: block;
+
   margin-bottom: 8px;
+
   font-size: 14px;
+
   font-weight: 600;
+
   color: #333;
 }
 
+
 .form-group input {
   width: 100%;
+
   padding: 13px 14px;
+
   border: 1px solid #d8d8d8;
+
   border-radius: 8px;
+
   font-size: 15px;
+
   outline: none;
+
   transition: border-color 0.2s;
 }
 
+
 .form-group input:focus {
-  border-color: #555;
+  border-color: #7c3aed;
 }
+
 
 .form-group input::placeholder {
   color: #aaa;
 }
 
-/* Error */
+
+/* =========================
+   Error
+========================= */
+
 .error-message {
   margin: -5px 0 15px;
+
   color: #d32f2f;
+
   font-size: 14px;
 }
 
-/* Login Button */
+
+/* =========================
+   Login Button
+========================= */
+
 .login-button {
   width: 100%;
+
   padding: 14px;
+
   border: none;
+
   border-radius: 8px;
+
   background: #222;
+
   color: #ffffff;
+
   font-size: 16px;
+
   font-weight: 600;
+
   cursor: pointer;
+
   transition: background 0.2s;
 }
+
 
 .login-button:hover {
   background: #444;
 }
 
-/* Register */
+
+/* =========================
+   Register
+========================= */
+
 .register-section {
   margin-top: 25px;
+
   padding-top: 22px;
+
   border-top: 1px solid #eeeeee;
+
   display: flex;
+
   justify-content: center;
+
   align-items: center;
+
   gap: 6px;
+
   font-size: 14px;
+
   color: #777;
 }
 
+
 .register-button {
   border: none;
+
   background: transparent;
+
   color: #222;
+
   font-size: 14px;
+
   font-weight: 600;
+
   cursor: pointer;
 }
+
 
 .register-button:hover {
   text-decoration: underline;
 }
 
-/* Footer */
+
+/* =========================
+   Footer
+========================= */
+
 .footer {
   padding: 20px;
+
   text-align: center;
+
   color: #888;
+
   font-size: 13px;
 }
 
-/* Mobile */
-@media (max-width: 600px) {
-  .header-inner {
-    padding: 15px 18px;
-  }
 
-  .logo {
-    font-size: 21px;
-  }
+/* =========================
+   Mobile
+========================= */
+
+@media (max-width: 600px) {
 
   .login-container {
     padding: 30px 16px;
   }
 
+
   .login-card {
     padding: 30px 22px;
   }
 
+
   .login-card h1 {
     font-size: 26px;
   }
+
 }
+
 </style>

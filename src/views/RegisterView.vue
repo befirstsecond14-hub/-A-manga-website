@@ -47,26 +47,10 @@ function register() {
 function goLogin() {
   router.push('/login')
 }
-
-function goHome() {
-  router.push('/')
-}
 </script>
 
 <template>
   <div class="register-page">
-    <!-- Header -->
-    <header class="header">
-      <div class="header-inner">
-        <div class="logo" @click="goHome">
-          MangaVerse
-        </div>
-
-        <button class="back-button" @click="goHome">
-          กลับหน้าหลัก
-        </button>
-      </div>
-    </header>
 
     <!-- Register -->
     <main class="register-container">
@@ -165,43 +149,6 @@ function goHome() {
   display: flex;
   flex-direction: column;
   background: #f5f5f5;
-}
-
-/* Header */
-.header {
-  background: #ffffff;
-  border-bottom: 1px solid #e5e5e5;
-}
-
-.header-inner {
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 18px 24px;
-
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
-.logo {
-  font-size: 24px;
-  font-weight: 800;
-  color: #222;
-  cursor: pointer;
-}
-
-.back-button {
-  border: none;
-  background: transparent;
-
-  color: #555;
-  font-size: 14px;
-
-  cursor: pointer;
-}
-
-.back-button:hover {
-  color: #111;
 }
 
 /* Main */
@@ -367,14 +314,6 @@ function goHome() {
 
 /* Mobile */
 @media (max-width: 600px) {
-  .header-inner {
-    padding: 15px 18px;
-  }
-
-  .logo {
-    font-size: 21px;
-  }
-
   .register-container {
     padding: 30px 16px;
   }
