@@ -1,7 +1,15 @@
 import { createRouter, createWebHistory } from 'vue-router'
+
 import HomeView from '@/views/HomeView.vue'
 import MangaPage from '@/views/MangaPage.vue'
 import ReadingPage from '@/views/ReadingPage.vue'
+import LoginView from '@/views/LoginView.vue'
+import RegisterView from '@/views/RegisterView.vue'
+import BookshelfView from '@/views/BookshelfView.vue'
+import AdminView from '@/views/AdminView.vue'
+import AdminMangaView from '@/views/AdminMangaView.vue'
+
+import { useAuthStore } from '@/stores/auth'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -24,7 +32,80 @@ const router = createRouter({
       name: 'reading',
       component: ReadingPage,
     },
+
+    {
+      path: '/login',
+      name: 'login',
+      component: LoginView,
+    },
+
+    {
+      path: '/register',
+      name: 'register',
+      component: RegisterView,
+    },
+
+    {
+      path: '/bookshelf',
+      name: 'bookshelf',
+      component: BookshelfView,
+      meta: {
+        requiresAuth: true,
+      },
+    },
+
+    {
+      path: '/admin',
+      name: 'admin',
+      component: AdminView,
+      meta: {
+        requiresAdmin: true,
+      },
+    },
+
+    {
+      path: '/admin/manga/:id',
+      name: 'admin-manga',
+      component: AdminMangaView,
+      meta: {
+        requiresAdmin: true,
+      },
+    },
   ],
+})
+
+router.beforeEach((to) => {
+  const authStore = useAuthStore()
+
+  // หน้าที่ต้อง Login
+  if (
+    to.meta.requiresAuth &&
+    !authStore.isLoggedIn
+  ) {
+    return {
+      name: 'login',
+    }
+  }
+
+  // หน้าที่ต้องเป็น Admin
+  if (
+    to.meta.requiresAdmin &&
+    !authStore.isAdmin
+  ) {
+    if (!authStore.isLoggedIn) {
+      return {
+        name: 'login',
+      }
+    }
+
+    alert('คุณไม่มีสิทธิ์เข้าถึงหน้านี้')
+
+    return {
+      name: 'home',
+    }
+  }
+
+  return true
 })
 
 export default router

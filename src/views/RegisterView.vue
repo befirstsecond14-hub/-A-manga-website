@@ -1,53 +1,51 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { useAuthStore } from '@/stores/auth'
 
 const router = useRouter()
-const authStore = useAuthStore()
 
+const username = ref('')
 const email = ref('')
 const password = ref('')
+const confirmPassword = ref('')
 const errorMessage = ref('')
 
-function login() {
+function register() {
   errorMessage.value = ''
 
-  // ตรวจสอบว่ากรอกข้อมูลครบหรือไม่
-  if (!email.value || !password.value) {
-    errorMessage.value = 'กรุณากรอกอีเมลและรหัสผ่าน'
+  if (
+    !username.value ||
+    !email.value ||
+    !password.value ||
+    !confirmPassword.value
+  ) {
+    errorMessage.value = 'กรุณากรอกข้อมูลให้ครบทุกช่อง'
     return
   }
 
-  // จำลองการเข้าสู่ระบบ
-  const username = email.value.split('@')[0] || 'User'
-
-  // ตรวจสอบสิทธิ์ของผู้ใช้
-  // ถ้าใช้อีเมลนี้ จะถือว่าเป็น Admin
-  const role =
-    email.value === 'admin@mangaverse.com'
-      ? 'admin'
-      : 'user'
-
-  // บันทึกข้อมูลการเข้าสู่ระบบ
-  authStore.login(
-    username,
-    email.value,
-    role,
-  )
-
-  // ถ้าเป็น Admin → ไปหน้า Admin
-  if (role === 'admin') {
-    router.push('/admin')
+  if (password.value.length < 6) {
+    errorMessage.value = 'รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษร'
     return
   }
 
-  // ถ้าเป็น User ทั่วไป → ไปหน้าหลัก
-  router.push('/')
+  if (password.value !== confirmPassword.value) {
+    errorMessage.value = 'รหัสผ่านไม่ตรงกัน'
+    return
+  }
+
+  // ตอนนี้เป็นการจำลองการสมัครสมาชิก
+  // ภายหลังจะเชื่อม Supabase Auth ตรงนี้
+  console.log('Username:', username.value)
+  console.log('Email:', email.value)
+  console.log('Password:', password.value)
+
+  alert('สมัครสมาชิกสำเร็จ')
+
+  router.push('/login')
 }
 
-function goRegister() {
-  router.push('/register')
+function goLogin() {
+  router.push('/login')
 }
 
 function goHome() {
@@ -56,49 +54,45 @@ function goHome() {
 </script>
 
 <template>
-  <div class="login-page">
-
+  <div class="register-page">
     <!-- Header -->
     <header class="header">
       <div class="header-inner">
-
-        <div
-          class="logo"
-          @click="goHome"
-        >
+        <div class="logo" @click="goHome">
           MangaVerse
         </div>
 
-        <button
-          class="back-button"
-          @click="goHome"
-        >
+        <button class="back-button" @click="goHome">
           กลับหน้าหลัก
         </button>
-
       </div>
     </header>
 
-    <!-- Login -->
-    <main class="login-container">
-
-      <div class="login-card">
-
-        <h1>เข้าสู่ระบบ</h1>
+    <!-- Register -->
+    <main class="register-container">
+      <div class="register-card">
+        <h1>สมัครสมาชิก</h1>
 
         <p class="subtitle">
-          เข้าสู่ระบบเพื่อใช้งาน Bookshelf
-          และฟีเจอร์สำหรับสมาชิก
+          สร้างบัญชี MangaVerse เพื่อใช้งานฟีเจอร์สำหรับสมาชิก
         </p>
 
-        <form @submit.prevent="login">
+        <form @submit.prevent="register">
+          <!-- Username -->
+          <div class="form-group">
+            <label for="username">ชื่อผู้ใช้</label>
+
+            <input
+              id="username"
+              v-model="username"
+              type="text"
+              placeholder="กรอกชื่อผู้ใช้"
+            />
+          </div>
 
           <!-- Email -->
           <div class="form-group">
-
-            <label for="email">
-              อีเมล
-            </label>
+            <label for="email">อีเมล</label>
 
             <input
               id="email"
@@ -106,70 +100,58 @@ function goHome() {
               type="email"
               placeholder="กรอกอีเมลของคุณ"
             />
-
           </div>
 
           <!-- Password -->
           <div class="form-group">
-
-            <label for="password">
-              รหัสผ่าน
-            </label>
+            <label for="password">รหัสผ่าน</label>
 
             <input
               id="password"
               v-model="password"
               type="password"
-              placeholder="กรอกรหัสผ่าน"
+              placeholder="กรอกรหัสผ่านอย่างน้อย 6 ตัวอักษร"
             />
+          </div>
 
+          <!-- Confirm Password -->
+          <div class="form-group">
+            <label for="confirm-password">ยืนยันรหัสผ่าน</label>
+
+            <input
+              id="confirm-password"
+              v-model="confirmPassword"
+              type="password"
+              placeholder="กรอกรหัสผ่านอีกครั้ง"
+            />
           </div>
 
           <!-- Error -->
-          <p
-            v-if="errorMessage"
-            class="error-message"
-          >
+          <p v-if="errorMessage" class="error-message">
             {{ errorMessage }}
           </p>
 
-          <!-- Login Button -->
-          <button
-            type="submit"
-            class="login-button"
-          >
-            เข้าสู่ระบบ
-          </button>
-
-        </form>
-
-        <!-- Register -->
-        <div class="register-section">
-
-          <span>
-            ยังไม่มีบัญชี?
-          </span>
-
-          <button
-            class="register-button"
-            @click="goRegister"
-          >
+          <!-- Register Button -->
+          <button type="submit" class="register-main-button">
             สมัครสมาชิก
           </button>
+        </form>
 
+        <!-- Login -->
+        <div class="login-section">
+          <span>มีบัญชีอยู่แล้ว?</span>
+
+          <button class="login-button" @click="goLogin">
+            เข้าสู่ระบบ
+          </button>
         </div>
-
       </div>
-
     </main>
 
     <!-- Footer -->
     <footer class="footer">
-      <p>
-        © 2026 MangaVerse
-      </p>
+      <p>© 2026 MangaVerse</p>
     </footer>
-
   </div>
 </template>
 
@@ -178,7 +160,7 @@ function goHome() {
   box-sizing: border-box;
 }
 
-.login-page {
+.register-page {
   min-height: 100vh;
   display: flex;
   flex-direction: column;
@@ -195,6 +177,7 @@ function goHome() {
   max-width: 1200px;
   margin: 0 auto;
   padding: 18px 24px;
+
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -210,8 +193,10 @@ function goHome() {
 .back-button {
   border: none;
   background: transparent;
+
   color: #555;
   font-size: 14px;
+
   cursor: pointer;
 }
 
@@ -220,58 +205,77 @@ function goHome() {
 }
 
 /* Main */
-.login-container {
+.register-container {
   flex: 1;
+
   display: flex;
   justify-content: center;
   align-items: center;
+
   padding: 50px 20px;
 }
 
-.login-card {
+.register-card {
   width: 100%;
-  max-width: 430px;
+  max-width: 450px;
+
   background: #ffffff;
+
   padding: 40px;
+
   border-radius: 16px;
+
   box-shadow: 0 8px 30px rgba(0, 0, 0, 0.08);
 }
 
-.login-card h1 {
+.register-card h1 {
   margin: 0;
+
   text-align: center;
+
   font-size: 30px;
   color: #222;
 }
 
 .subtitle {
   margin: 12px 0 30px;
+
   text-align: center;
+
   color: #777;
+
   font-size: 14px;
   line-height: 1.6;
 }
 
 /* Form */
 .form-group {
-  margin-bottom: 20px;
+  margin-bottom: 18px;
 }
 
 .form-group label {
   display: block;
+
   margin-bottom: 8px;
+
+  color: #333;
+
   font-size: 14px;
   font-weight: 600;
-  color: #333;
 }
 
 .form-group input {
   width: 100%;
+
   padding: 13px 14px;
+
   border: 1px solid #d8d8d8;
   border-radius: 8px;
-  font-size: 15px;
+
   outline: none;
+
+  font-size: 15px;
+
   transition: border-color 0.2s;
 }
 
@@ -285,60 +289,79 @@ function goHome() {
 
 /* Error */
 .error-message {
-  margin: -5px 0 15px;
+  margin: -2px 0 15px;
+
   color: #d32f2f;
+
   font-size: 14px;
 }
 
-/* Login Button */
-.login-button {
+/* Register */
+.register-main-button {
   width: 100%;
+
   padding: 14px;
+
   border: none;
   border-radius: 8px;
+
   background: #222;
   color: #ffffff;
+
   font-size: 16px;
   font-weight: 600;
+
   cursor: pointer;
+
   transition: background 0.2s;
 }
 
-.login-button:hover {
+.register-main-button:hover {
   background: #444;
 }
 
-/* Register */
-.register-section {
+/* Login */
+.login-section {
   margin-top: 25px;
+
   padding-top: 22px;
+
   border-top: 1px solid #eeeeee;
+
   display: flex;
   justify-content: center;
   align-items: center;
   gap: 6px;
-  font-size: 14px;
+
   color: #777;
+
+  font-size: 14px;
 }
 
-.register-button {
+.login-button {
   border: none;
   background: transparent;
+
   color: #222;
+
   font-size: 14px;
   font-weight: 600;
+
   cursor: pointer;
 }
 
-.register-button:hover {
+.login-button:hover {
   text-decoration: underline;
 }
 
 /* Footer */
 .footer {
   padding: 20px;
+
   text-align: center;
+
   color: #888;
+
   font-size: 13px;
 }
 
@@ -352,15 +375,15 @@ function goHome() {
     font-size: 21px;
   }
 
-  .login-container {
+  .register-container {
     padding: 30px 16px;
   }
 
-  .login-card {
+  .register-card {
     padding: 30px 22px;
   }
 
-  .login-card h1 {
+  .register-card h1 {
     font-size: 26px;
   }
 }
