@@ -1,42 +1,19 @@
 <script setup lang="ts">
-const mangaList = [
-  {
-    id: 1,
-    title: 'One Piece',
-    category: 'Action',
-    chapter: 100,
-    status: 'กำลังดำเนินการ',
-    cover:
-      'https://images.unsplash.com/photo-1613376023733-0a73315d9b06?w=600',
-  },
-  {
-    id: 2,
-    title: 'Solo Leveling',
-    category: 'Fantasy',
-    chapter: 100,
-    status: 'จบแล้ว',
-    cover:
-      'https://images.unsplash.com/photo-1578632767115-351597cf2477?w=600',
-  },
-  {
-    id: 3,
-    title: 'Naruto',
-    category: 'Action',
-    chapter: 100,
-    status: 'จบแล้ว',
-    cover:
-      'https://images.unsplash.com/photo-1560419015-7c427e8ae5ba?w=600',
-  },
-  {
-    id: 4,
-    title: 'Demon Slayer',
-    category: 'Action',
-    chapter: 100,
-    status: 'จบแล้ว',
-    cover:
-      'https://images.unsplash.com/photo-1607604276583-eef5d076aa5f?w=600',
-  },
-]
+import { ref, onMounted } from 'vue'
+import { MangaService } from '../services/MangaService'
+import type { Manga } from '../models/Manga'
+
+const mangaService = new MangaService()
+
+const mangaList = ref<Manga[]>([])
+
+function loadManga() {
+  mangaList.value = mangaService.getAllManga()
+}
+
+onMounted(() => {
+  loadManga()
+})
 </script>
 
 <template>
@@ -45,9 +22,7 @@ const mangaList = [
     <!-- Hero -->
     <section class="hero">
       <div class="page-container hero-inner">
-
         <div class="hero-content">
-
           <p class="small-title">
             WELCOME TO MANGAVERSE
           </p>
@@ -64,8 +39,6 @@ const mangaList = [
           </p>
 
           <div class="hero-buttons">
-
-            <!-- แก้ตรงนี้ → ไปชั้นหนังสือ -->
             <RouterLink
               to="/bookshelf"
               class="primary-btn"
@@ -79,25 +52,18 @@ const mangaList = [
             >
               ดูมังงะทั้งหมด
             </RouterLink>
-
           </div>
-
         </div>
-
       </div>
     </section>
-
 
     <!-- Main -->
     <main class="page-container main-content">
 
       <!-- Recommended -->
       <section class="section">
-
         <div class="section-header">
-
           <div>
-
             <p class="section-label">
               RECOMMENDED
             </p>
@@ -105,7 +71,6 @@ const mangaList = [
             <h2>
               มังงะแนะนำ
             </h2>
-
           </div>
 
           <RouterLink
@@ -114,9 +79,7 @@ const mangaList = [
           >
             ดูทั้งหมด →
           </RouterLink>
-
         </div>
-
 
         <!-- Manga Grid -->
         <div class="manga-grid">
@@ -127,19 +90,15 @@ const mangaList = [
             :to="`/manga/${manga.id}`"
             class="manga-card"
           >
-
             <div class="cover-wrapper">
-
               <img
                 :src="manga.cover"
                 :alt="manga.title"
                 class="cover"
               />
-
             </div>
 
             <div class="card-content">
-
               <span class="category">
                 {{ manga.category }}
               </span>
@@ -149,25 +108,18 @@ const mangaList = [
               </h3>
 
               <p>
-                ตอนล่าสุด {{ manga.chapter }}
+                ตอนล่าสุด {{ manga.latestChapter }}
               </p>
-
             </div>
-
           </RouterLink>
 
         </div>
-
       </section>
-
 
       <!-- Latest Update -->
       <section class="section latest-section">
-
         <div class="section-header">
-
           <div>
-
             <p class="section-label">
               LATEST UPDATE
             </p>
@@ -175,11 +127,8 @@ const mangaList = [
             <h2>
               อัปเดตล่าสุด
             </h2>
-
           </div>
-
         </div>
-
 
         <div class="latest-list">
 
@@ -190,14 +139,12 @@ const mangaList = [
             :to="`/manga/${manga.id}`"
             class="latest-item"
           >
-
             <img
               :src="manga.cover"
               :alt="manga.title"
             />
 
             <div class="latest-info">
-
               <h3>
                 {{ manga.title }}
               </h3>
@@ -209,25 +156,20 @@ const mangaList = [
 
                 {{ manga.status }}
               </p>
-
             </div>
 
             <span class="read-btn">
               อ่าน
             </span>
-
           </RouterLink>
 
         </div>
-
       </section>
 
     </main>
 
-
     <!-- Footer -->
     <footer class="footer">
-
       <div class="page-container footer-inner">
 
         <div class="footer-logo">
@@ -239,15 +181,12 @@ const mangaList = [
         </p>
 
       </div>
-
     </footer>
 
   </div>
 </template>
 
-
 <style scoped>
-
 /* ========================================
    Home
 ======================================== */
@@ -257,7 +196,6 @@ const mangaList = [
   background: #f7f7f8;
   color: #18181b;
 }
-
 
 /* ========================================
    Container
@@ -269,17 +207,14 @@ const mangaList = [
   margin: 0 auto;
 }
 
-
 /* ========================================
    Hero
 ======================================== */
 
 .hero {
   min-height: 430px;
-
   display: flex;
   align-items: center;
-
   background:
     linear-gradient(
       90deg,
@@ -287,7 +222,6 @@ const mangaList = [
       #27272a 60%,
       #3f3f46 100%
     );
-
   color: #ffffff;
 }
 
@@ -303,35 +237,26 @@ const mangaList = [
 
 .small-title {
   margin: 0 0 14px;
-
   color: #a78bfa;
-
   font-size: 13px;
   font-weight: 700;
-
   letter-spacing: 2px;
 }
 
 .hero h1 {
   margin: 0;
-
   font-size: 48px;
   font-weight: 800;
-
   line-height: 1.2;
 }
 
 .description {
   max-width: 560px;
-
   margin: 18px 0 0;
-
   color: #d4d4d8;
-
   font-size: 15px;
   line-height: 1.7;
 }
-
 
 /* ========================================
    Hero Buttons
@@ -340,30 +265,21 @@ const mangaList = [
 .hero-buttons {
   display: flex;
   align-items: center;
-
   gap: 12px;
-
   margin-top: 28px;
 }
 
 .primary-btn,
 .secondary-btn {
   display: inline-flex;
-
   align-items: center;
   justify-content: center;
-
   min-height: 42px;
-
   padding: 0 20px;
-
   border-radius: 8px;
-
   font-size: 14px;
   font-weight: 600;
-
   text-decoration: none;
-
   transition:
     background 0.2s ease,
     transform 0.2s ease;
@@ -381,16 +297,13 @@ const mangaList = [
 
 .secondary-btn {
   border: 1px solid #71717a;
-
   background: transparent;
-
   color: #ffffff;
 }
 
 .secondary-btn:hover {
   background: rgba(255, 255, 255, 0.08);
 }
-
 
 /* ========================================
    Main
@@ -399,7 +312,6 @@ const mangaList = [
 .main-content {
   padding-bottom: 50px;
 }
-
 
 /* ========================================
    Section
@@ -415,36 +327,28 @@ const mangaList = [
 
 .section-header {
   display: flex;
-
   align-items: flex-end;
   justify-content: space-between;
-
   margin-bottom: 25px;
 }
 
 .section-label {
   margin: 0 0 6px;
-
   color: #7c3aed;
-
   font-size: 12px;
   font-weight: 700;
-
   letter-spacing: 1.5px;
 }
 
 .section-header h2 {
   margin: 0;
-
   font-size: 28px;
   font-weight: 800;
 }
 
 .view-all {
   color: #7c3aed;
-
   font-size: 14px;
-
   text-decoration: none;
 }
 
@@ -452,33 +356,24 @@ const mangaList = [
   text-decoration: underline;
 }
 
-
 /* ========================================
    Manga Grid
 ======================================== */
 
 .manga-grid {
   display: grid;
-
   grid-template-columns:
     repeat(4, minmax(0, 1fr));
-
   gap: 22px;
 }
 
 .manga-card {
   overflow: hidden;
-
   background: #ffffff;
-
   border: 1px solid #e5e5e5;
-
   border-radius: 10px;
-
   color: inherit;
-
   text-decoration: none;
-
   transition:
     transform 0.2s ease,
     box-shadow 0.2s ease;
@@ -486,29 +381,22 @@ const mangaList = [
 
 .manga-card:hover {
   transform: translateY(-4px);
-
   box-shadow:
     0 10px 25px rgba(0, 0, 0, 0.08);
 }
 
 .cover-wrapper {
   width: 100%;
-
   height: 280px;
-
   overflow: hidden;
-
   background: #eeeeee;
 }
 
 .cover {
   width: 100%;
   height: 100%;
-
   object-fit: cover;
-
   display: block;
-
   transition: transform 0.3s ease;
 }
 
@@ -522,26 +410,21 @@ const mangaList = [
 
 .category {
   color: #7c3aed;
-
   font-size: 12px;
   font-weight: 600;
 }
 
 .card-content h3 {
   margin: 7px 0;
-
   font-size: 18px;
   font-weight: 700;
 }
 
 .card-content p {
   margin: 0;
-
   color: #777777;
-
   font-size: 13px;
 }
-
 
 /* ========================================
    Latest
@@ -549,35 +432,21 @@ const mangaList = [
 
 .latest-list {
   display: flex;
-
   flex-direction: column;
-
   gap: 10px;
 }
 
-
-/* สำคัญ: ทั้งกรอบเป็น Link */
 .latest-item {
   display: flex;
-
   align-items: center;
-
   gap: 18px;
-
   padding: 12px;
-
   background: #ffffff;
-
   border: 1px solid #e5e5e5;
-
   border-radius: 10px;
-
   color: inherit;
-
   text-decoration: none;
-
   cursor: pointer;
-
   transition:
     transform 0.2s ease,
     box-shadow 0.2s ease;
@@ -585,7 +454,6 @@ const mangaList = [
 
 .latest-item:hover {
   transform: translateY(-2px);
-
   box-shadow:
     0 6px 18px rgba(0, 0, 0, 0.07);
 }
@@ -593,33 +461,25 @@ const mangaList = [
 .latest-item img {
   width: 65px;
   height: 80px;
-
   flex-shrink: 0;
-
   object-fit: cover;
-
   border-radius: 6px;
-
   display: block;
 }
 
 .latest-info {
   flex: 1;
-
   min-width: 0;
 }
 
 .latest-info h3 {
   margin: 0 0 6px;
-
   font-size: 17px;
 }
 
 .latest-info p {
   margin: 0;
-
   color: #777777;
-
   font-size: 13px;
 }
 
@@ -627,27 +487,20 @@ const mangaList = [
   margin: 0 5px;
 }
 
-
-/* Read Button */
+/* ========================================
+   Read Button
+======================================== */
 
 .read-btn {
   flex-shrink: 0;
-
   display: inline-flex;
-
   align-items: center;
   justify-content: center;
-
   min-height: 38px;
-
   padding: 0 18px;
-
   background: #7c3aed;
-
   color: #ffffff;
-
   border-radius: 7px;
-
   font-size: 13px;
   font-weight: 600;
 }
@@ -656,33 +509,26 @@ const mangaList = [
   background: #6d28d9;
 }
 
-
 /* ========================================
    Footer
 ======================================== */
 
 .footer {
   margin-top: 40px;
-
   padding: 35px 0;
-
   background: #18181b;
-
   color: #aaaaaa;
 }
 
 .footer-inner {
   display: flex;
-
   flex-direction: column;
-
   gap: 8px;
 }
 
 .footer-logo {
   font-size: 25px;
   font-weight: 800;
-
   color: #ffffff;
 }
 
@@ -692,17 +538,14 @@ const mangaList = [
 
 .footer p {
   margin: 0;
-
   font-size: 13px;
 }
-
 
 /* ========================================
    Responsive
 ======================================== */
 
 @media (max-width: 1000px) {
-
   .page-container {
     width: 92%;
   }
@@ -710,19 +553,15 @@ const mangaList = [
   .manga-grid {
     grid-template-columns:
       repeat(2, minmax(0, 1fr));
-
     gap: 18px;
   }
 
   .hero h1 {
     font-size: 42px;
   }
-
 }
 
-
 @media (max-width: 650px) {
-
   .page-container {
     width: 92%;
   }
@@ -745,13 +584,11 @@ const mangaList = [
 
   .hero-buttons {
     flex-direction: column;
-
     align-items: flex-start;
   }
 
   .manga-grid {
     grid-template-columns: 1fr 1fr;
-
     gap: 10px;
   }
 
@@ -779,12 +616,9 @@ const mangaList = [
   .read-btn {
     padding: 0 13px;
   }
-
 }
 
-
 @media (max-width: 420px) {
-
   .hero h1 {
     font-size: 30px;
   }
@@ -804,7 +638,5 @@ const mangaList = [
   .latest-info p {
     font-size: 12px;
   }
-
 }
-
 </style>

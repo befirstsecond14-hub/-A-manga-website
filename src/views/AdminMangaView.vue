@@ -1,487 +1,46 @@
-<template>
-  <div class="admin-page">
-
-    <!-- Header -->
-    <header class="admin-header">
-      <div class="header-left">
-        <button
-          class="back-btn"
-          @click="goBack"
-        >
-          ← กลับ
-        </button>
-
-        <div>
-          <h1>จัดการมังงะ</h1>
-          <p>จัดการข้อมูลมังงะและตอนทั้งหมด</p>
-        </div>
-      </div>
-    </header>
-
-    <main class="admin-container">
-
-      <!-- Manga Information -->
-      <section class="manga-section">
-        <div class="section-header">
-          <div>
-            <h2>ข้อมูลมังงะ</h2>
-            <p>แก้ไขข้อมูลพื้นฐานของมังงะ</p>
-          </div>
-
-          <button
-            class="primary-btn"
-            @click="saveManga"
-          >
-            บันทึกข้อมูล
-          </button>
-        </div>
-
-        <div class="manga-content">
-
-          <!-- Cover -->
-          <div class="cover-section">
-            <img
-              :src="mangaForm.cover"
-              :alt="mangaForm.title"
-              class="manga-cover"
-            />
-
-            <label class="upload-cover-btn">
-              เปลี่ยนรูปปก
-
-              <input
-                type="file"
-                accept="image/*"
-                @change="handleCoverUpload"
-                hidden
-              />
-            </label>
-          </div>
-
-          <!-- Form -->
-          <div class="manga-form">
-
-            <div class="form-group">
-              <label>ชื่อเรื่อง</label>
-
-              <input
-                v-model="mangaForm.title"
-                type="text"
-                placeholder="ชื่อมังงะ"
-              />
-            </div>
-
-            <div class="form-group">
-              <label>ผู้แต่ง</label>
-
-              <input
-                v-model="mangaForm.author"
-                type="text"
-                placeholder="ชื่อผู้แต่ง"
-              />
-            </div>
-
-            <div class="form-row">
-
-              <div class="form-group">
-                <label>หมวดหมู่</label>
-
-                <input
-                  v-model="mangaForm.category"
-                  type="text"
-                  placeholder="หมวดหมู่"
-                />
-              </div>
-
-              <div class="form-group">
-                <label>สถานะ</label>
-
-                <select v-model="mangaForm.status">
-                  <option value="กำลังดำเนินเรื่อง">
-                    กำลังดำเนินเรื่อง
-                  </option>
-
-                  <option value="จบแล้ว">
-                    จบแล้ว
-                  </option>
-                </select>
-              </div>
-
-            </div>
-
-            <div class="form-group">
-              <label>คำอธิบาย</label>
-
-              <textarea
-                v-model="mangaForm.description"
-                rows="5"
-                placeholder="คำอธิบายมังงะ"
-              ></textarea>
-            </div>
-
-          </div>
-        </div>
-      </section>
-
-      <!-- Chapter Section -->
-      <section class="chapter-section">
-
-        <div class="section-header">
-          <div>
-            <h2>จัดการตอน</h2>
-
-            <p>
-              จำนวนทั้งหมด {{ chapters.length }} ตอน
-            </p>
-          </div>
-
-          <button
-            class="primary-btn"
-            @click="openAddChapterForm"
-          >
-            + เพิ่มตอน
-          </button>
-        </div>
-
-        <!-- Chapter List -->
-        <div
-          v-if="chapters.length > 0"
-          class="chapter-list"
-        >
-
-          <div
-            v-for="chapter in sortedChapters"
-            :key="chapter.id"
-            class="chapter-card"
-          >
-
-            <div class="chapter-info">
-
-              <div class="chapter-number">
-                ตอน {{ chapter.number }}
-              </div>
-
-              <div class="chapter-title">
-                {{ chapter.title }}
-              </div>
-
-              <div class="chapter-images">
-                {{ chapter.imageCount }} รูป
-              </div>
-
-            </div>
-
-            <div class="chapter-actions">
-
-              <button
-                class="edit-btn"
-                @click="openEditChapterForm(chapter)"
-              >
-                แก้ไข
-              </button>
-
-              <button
-                class="delete-btn"
-                @click="deleteChapter(chapter.id)"
-              >
-                ลบ
-              </button>
-
-            </div>
-          </div>
-
-        </div>
-
-        <!-- Empty -->
-        <div
-          v-else
-          class="empty-state"
-        >
-          <h3>ยังไม่มีตอน</h3>
-
-          <p>
-            กดปุ่ม "เพิ่มตอน" เพื่อเพิ่มตอนแรก
-          </p>
-
-          <button
-            class="primary-btn"
-            @click="openAddChapterForm"
-          >
-            + เพิ่มตอนแรก
-          </button>
-        </div>
-
-      </section>
-    </main>
-
-    <!-- Chapter Modal -->
-    <div
-      v-if="showChapterModal"
-      class="modal-overlay"
-      @click.self="closeChapterModal"
-    >
-
-      <div class="modal">
-
-        <div class="modal-header">
-
-          <div>
-            <h2>
-              {{
-                editingChapterId
-                  ? 'แก้ไขตอน'
-                  : 'เพิ่มตอนใหม่'
-              }}
-            </h2>
-
-            <p>
-              {{
-                editingChapterId
-                  ? 'แก้ไขข้อมูลของตอน'
-                  : 'เพิ่มตอนใหม่ลงในมังงะ'
-              }}
-            </p>
-          </div>
-
-          <button
-            class="close-btn"
-            @click="closeChapterModal"
-          >
-            ×
-          </button>
-
-        </div>
-
-        <div class="modal-body">
-
-          <!-- Chapter Number -->
-          <div class="form-group">
-
-            <label>เลขตอน</label>
-
-            <input
-              v-model.number="chapterForm.number"
-              type="number"
-              min="1"
-              step="0.1"
-              placeholder="เช่น 1, 2, 3, 10.5, 101"
-            />
-
-            <small>
-              สามารถเพิ่มตอนต่อไปได้ไม่จำกัด
-            </small>
-
-          </div>
-
-          <!-- Chapter Title -->
-          <div class="form-group">
-
-            <label>ชื่อตอน</label>
-
-            <input
-              v-model="chapterForm.title"
-              type="text"
-              placeholder="เช่น การเริ่มต้น"
-            />
-
-          </div>
-
-          <!-- Images -->
-          <div class="form-group">
-
-            <label>รูปภาพในตอน</label>
-
-            <div class="upload-area">
-
-              <input
-                ref="fileInput"
-                type="file"
-                accept="image/*"
-                multiple
-                @change="handleChapterImages"
-                hidden
-              />
-
-              <button
-                type="button"
-                class="upload-btn"
-                @click="triggerFileInput"
-              >
-                เลือกรูปภาพ
-              </button>
-
-              <p>
-                {{
-                  selectedFiles.length > 0
-                    ? `เลือกแล้ว ${selectedFiles.length} รูป`
-                    : 'ยังไม่ได้เลือกรูปภาพ'
-                }}
-              </p>
-
-            </div>
-
-          </div>
-
-          <!-- Image Preview -->
-          <div
-            v-if="previewUrls.length > 0"
-            class="preview-section"
-          >
-
-            <h3>ตัวอย่างรูปภาพ</h3>
-
-            <div class="preview-grid">
-
-              <div
-                v-for="(url, index) in previewUrls"
-                :key="url"
-                class="preview-item"
-              >
-
-                <img
-                  :src="url"
-                  :alt="`รูปที่ ${index + 1}`"
-                />
-
-                <span>
-                  {{ index + 1 }}
-                </span>
-
-              </div>
-
-            </div>
-          </div>
-
-        </div>
-
-        <div class="modal-footer">
-
-          <button
-            class="secondary-btn"
-            @click="closeChapterModal"
-          >
-            ยกเลิก
-          </button>
-
-          <button
-            class="primary-btn"
-            @click="saveChapter"
-          >
-            {{
-              editingChapterId
-                ? 'บันทึกการแก้ไข'
-                : 'เพิ่มตอน'
-            }}
-          </button>
-
-        </div>
-
-      </div>
-    </div>
-
-  </div>
-</template>
-
 <script setup lang="ts">
 import {
   computed,
   onBeforeUnmount,
   reactive,
-  ref
+  ref,
 } from 'vue'
 
 import {
   useRoute,
-  useRouter
+  useRouter,
 } from 'vue-router'
 
-/* =========================
-   Types
-========================= */
+import { MangaService } from '../services/MangaService'
 
 type MangaStatus =
   | 'กำลังดำเนินเรื่อง'
   | 'จบแล้ว'
 
-interface Manga {
-  id: number
-  title: string
-  author: string
-  category: string
-  status: MangaStatus
-  cover: string
-  description: string
-}
-
-interface Chapter {
+interface AdminChapter {
   id: number
   number: number
   title: string
   imageCount: number
+  images: string[]
 }
-
-/* =========================
-   Router
-========================= */
 
 const router = useRouter()
 const route = useRoute()
+const mangaService = new MangaService()
 
 /* =========================
-   Manga Data
-========================= */
-
-const mangaList: Manga[] = [
-  {
-    id: 1,
-    title: 'One Piece',
-    author: 'Chugong',
-    category: 'Action',
-    status: 'จบแล้ว',
-    cover:
-      'https://images.unsplash.com/photo-1612036782180-6f0b6cd846fe?w=600',
-    description:
-      'เรื่องราวของนักล่าที่อ่อนแอที่สุดและได้รับพลังจากระบบปริศนา'
-  },
-
-  {
-    id: 2,
-    title: 'Solo Leveling',
-    author: 'Eiichiro Oda',
-    category: 'Adventure',
-    status: 'กำลังดำเนินเรื่อง',
-    cover:
-      'https://images.unsplash.com/photo-1578632767115-351597cf2477?w=600',
-    description:
-      'การผจญภัยของลูฟี่และกลุ่มโจรสลัดหมวกฟาง'
-  },
-
-  {
-    id: 3,
-    title: 'Naruto',
-    author: 'Masashi Kishimoto',
-    category: 'Action',
-    status: 'จบแล้ว',
-    cover:
-      'https://images.unsplash.com/photo-1578632292335-df3abbb0d586?w=600',
-    description:
-      'เรื่องราวของนินจาหนุ่มที่ต้องการได้รับการยอมรับจากทุกคน'
-  }
-]
-
-/* =========================
-   Find Manga
+   Manga
 ========================= */
 
 const mangaId = Number(route.params.id)
 
-const foundManga = mangaList.find(
-  manga => manga.id === mangaId
-)
+const manga =
+  mangaService.getMangaById(mangaId)
 
-const manga = reactive<Manga>({
-  ...(foundManga ?? mangaList[0]!)
-})
+if (!manga) {
+  router.push('/admin')
+}
 
 /* =========================
    Manga Form
@@ -495,57 +54,140 @@ const mangaForm = reactive<{
   cover: string
   description: string
 }>({
-  title: manga.title,
-  author: manga.author,
-  category: manga.category,
-  status: manga.status,
-  cover: manga.cover,
-  description: manga.description
+  title: manga?.title ?? '',
+  author: manga?.author ?? '',
+  category: manga?.category ?? '',
+  status:
+    manga?.status === 'จบแล้ว'
+      ? 'จบแล้ว'
+      : 'กำลังดำเนินเรื่อง',
+  cover: manga?.cover ?? '',
+  description: manga?.description ?? '',
 })
+
+/* =========================
+   Toast
+========================= */
+
+const showToast = ref(false)
+const toastMessage = ref('')
+
+let toastTimer:
+  ReturnType<typeof setTimeout> | null = null
+
+function toast(message: string) {
+  toastMessage.value = message
+  showToast.value = true
+
+  if (toastTimer) {
+    clearTimeout(toastTimer)
+  }
+
+  toastTimer = setTimeout(() => {
+    showToast.value = false
+  }, 2500)
+}
+
+/* =========================
+   Chapter Storage
+========================= */
+
+const chapterStorageKey =
+  `mangaverse_chapters_${mangaId}`
+
+/* =========================
+   Load Chapters
+========================= */
+
+function loadChapters(): AdminChapter[] {
+  const saved = localStorage.getItem(
+    chapterStorageKey
+  )
+
+  if (!saved) {
+    return []
+  }
+
+  try {
+    const parsed = JSON.parse(saved)
+
+    if (!Array.isArray(parsed)) {
+      return []
+    }
+
+    return parsed
+      .map((chapter) => {
+        const images =
+          Array.isArray(chapter.images)
+            ? chapter.images
+                .map((image: unknown) =>
+                  String(image)
+                )
+                .filter(
+                  (image: string) =>
+                    image.length > 0
+                )
+            : []
+
+        const imageCount =
+          images.length > 0
+            ? images.length
+            : Number(
+                chapter.imageCount ?? 0
+              )
+
+        return {
+          id: Number(chapter.id),
+          number: Number(chapter.number),
+          title: String(
+            chapter.title ?? ''
+          ),
+          imageCount,
+          images,
+        }
+      })
+      .filter(
+        (chapter) =>
+          Number.isFinite(chapter.id) &&
+          Number.isFinite(chapter.number)
+      )
+  } catch {
+    return []
+  }
+}
 
 /* =========================
    Chapters
 ========================= */
 
-const chapters = ref<Chapter[]>([
-  {
-    id: 1,
-    number: 96,
-    title: 'การต่อสู้ครั้งสุดท้าย',
-    imageCount: 20
-  },
-
-  {
-    id: 2,
-    number: 97,
-    title: 'จุดเริ่มต้นใหม่',
-    imageCount: 22
-  },
-
-  {
-    id: 3,
-    number: 98,
-    title: 'ความลับ',
-    imageCount: 25
-  },
-
-  {
-    id: 4,
-    number: 99,
-    title: 'ศัตรูคนใหม่',
-    imageCount: 24
-  },
-
-  {
-    id: 5,
-    number: 100,
-    title: 'บทสรุป',
-    imageCount: 30
-  }
-])
+const chapters = ref<AdminChapter[]>(
+  loadChapters()
+)
 
 /* =========================
-   Sort Chapters
+   Save Chapters
+========================= */
+
+function saveChapters() {
+  try {
+    localStorage.setItem(
+      chapterStorageKey,
+      JSON.stringify(chapters.value)
+    )
+
+    return true
+  } catch (error) {
+    console.error(
+      'ไม่สามารถบันทึก Chapter ได้:',
+      error
+    )
+
+    return false
+  }
+}
+
+/* =========================
+   Sorted Chapters
 ========================= */
 
 const sortedChapters = computed(() => {
@@ -565,16 +207,19 @@ const chapterForm = reactive<{
 }>({
   number: 1,
   title: '',
-  imageCount: 0
+  imageCount: 0,
 })
 
 /* =========================
-   Modal State
+   Modal
 ========================= */
 
 const showChapterModal = ref(false)
 
-const editingChapterId = ref<number | null>(null)
+const editingChapterId =
+  ref<number | null>(null)
+
+const isSavingChapter = ref(false)
 
 /* =========================
    File Upload
@@ -590,6 +235,13 @@ const previewUrls =
   ref<string[]>([])
 
 /* =========================
+   Existing Images
+========================= */
+
+const existingImages =
+  ref<string[]>([])
+
+/* =========================
    Back
 ========================= */
 
@@ -602,42 +254,132 @@ function goBack() {
 ========================= */
 
 function saveManga() {
+  if (!manga) {
+    return
+  }
+
   if (!mangaForm.title.trim()) {
+    toast('กรุณากรอกชื่อมังงะ')
     return
   }
 
   if (!mangaForm.author.trim()) {
+    toast('กรุณากรอกชื่อผู้แต่ง')
     return
   }
 
-  manga.title = mangaForm.title.trim()
-  manga.author = mangaForm.author.trim()
-  manga.category = mangaForm.category.trim()
-  manga.status = mangaForm.status
-  manga.cover = mangaForm.cover
+  if (!mangaForm.category.trim()) {
+    toast('กรุณากรอกหมวดหมู่')
+    return
+  }
+
+  manga.title =
+    mangaForm.title.trim()
+
+  manga.author =
+    mangaForm.author.trim()
+
+  manga.category =
+    mangaForm.category.trim()
+
+  manga.status =
+    mangaForm.status
+
+  manga.cover =
+    mangaForm.cover
+
   manga.description =
     mangaForm.description.trim()
+
+  const updated =
+    mangaService.updateManga(manga)
+
+  if (!updated) {
+    toast(
+      'ไม่สามารถบันทึกข้อมูลได้'
+    )
+    return
+  }
+
+  toast(
+    'บันทึกข้อมูลมังงะเรียบร้อยแล้ว'
+  )
+}
+
+/* =========================
+   File To Data URL
+========================= */
+
+function fileToDataURL(
+  file: File
+): Promise<string> {
+  return new Promise(
+    (resolve, reject) => {
+      const reader =
+        new FileReader()
+
+      reader.onload = () => {
+        resolve(
+          String(reader.result)
+        )
+      }
+
+      reader.onerror = () => {
+        reject(
+          new Error(
+            'ไม่สามารถอ่านไฟล์ได้'
+          )
+        )
+      }
+
+      reader.readAsDataURL(file)
+    }
+  )
 }
 
 /* =========================
    Cover Upload
 ========================= */
 
-function handleCoverUpload(
+async function handleCoverUpload(
   event: Event
 ) {
   const input =
     event.target as HTMLInputElement
 
-  const file = input.files?.[0]
+  const file =
+    input.files?.[0]
 
   if (!file) {
     return
   }
 
-  const url = URL.createObjectURL(file)
+  if (!file.type.startsWith('image/')) {
+    toast(
+      'กรุณาเลือกไฟล์รูปภาพเท่านั้น'
+    )
 
-  mangaForm.cover = url
+    input.value = ''
+    return
+  }
+
+  try {
+    const imageData =
+      await fileToDataURL(file)
+
+    mangaForm.cover =
+      imageData
+
+    toast(
+      'เปลี่ยนรูปปกแล้ว กดบันทึกข้อมูลเพื่อบันทึก'
+    )
+  } catch {
+    toast(
+      'ไม่สามารถอ่านรูปปกได้'
+    )
+  }
+
+  input.value = ''
 }
 
 /* =========================
@@ -651,7 +393,8 @@ function openAddChapterForm() {
     chapters.value.length > 0
       ? Math.max(
           ...chapters.value.map(
-            chapter => chapter.number
+            (chapter) =>
+              chapter.number
           )
         )
       : 0
@@ -666,6 +409,8 @@ function openAddChapterForm() {
 
   selectedFiles.value = []
 
+  existingImages.value = []
+
   clearPreviewUrls()
 
   showChapterModal.value = true
@@ -676,9 +421,10 @@ function openAddChapterForm() {
 ========================= */
 
 function openEditChapterForm(
-  chapter: Chapter
+  chapter: AdminChapter
 ) {
-  editingChapterId.value = chapter.id
+  editingChapterId.value =
+    chapter.id
 
   chapterForm.number =
     chapter.number
@@ -691,6 +437,9 @@ function openEditChapterForm(
 
   selectedFiles.value = []
 
+  existingImages.value =
+    [...chapter.images]
+
   clearPreviewUrls()
 
   showChapterModal.value = true
@@ -700,7 +449,11 @@ function openEditChapterForm(
    Save Chapter
 ========================= */
 
-function saveChapter() {
+async function saveChapter() {
+  if (isSavingChapter.value) {
+    return
+  }
+
   const number =
     Number(chapterForm.number)
 
@@ -711,91 +464,178 @@ function saveChapter() {
     !Number.isFinite(number) ||
     number < 1
   ) {
+    toast(
+      'กรุณากรอกเลขตอนให้ถูกต้อง'
+    )
     return
   }
 
   if (!title) {
+    toast('กรุณากรอกชื่อตอน')
     return
   }
 
   /* =========================
-     Check Duplicate Chapter
+     Check Duplicate
   ========================= */
 
   const duplicate =
-    chapters.value.some(chapter => {
-      if (
-        editingChapterId.value !== null &&
-        chapter.id ===
-          editingChapterId.value
-      ) {
-        return false
-      }
+    chapters.value.some(
+      (chapter) => {
+        if (
+          editingChapterId.value !==
+            null &&
+          chapter.id ===
+            editingChapterId.value
+        ) {
+          return false
+        }
 
-      return chapter.number === number
-    })
+        return (
+          chapter.number === number
+        )
+      }
+    )
 
   if (duplicate) {
+    toast('เลขตอนนี้มีอยู่แล้ว')
     return
   }
 
-  /* =========================
-     Edit Existing Chapter
-  ========================= */
+  isSavingChapter.value = true
 
-  if (
-    editingChapterId.value !== null
-  ) {
-    const chapter =
-      chapters.value.find(
-        item =>
-          item.id ===
-          editingChapterId.value
-      )
+  try {
+    /* =========================
+       Convert Images
+    ========================= */
 
-    if (!chapter) {
-      return
-    }
-
-    chapter.number = number
-    chapter.title = title
+    let images: string[] = []
 
     if (
       selectedFiles.value.length > 0
     ) {
-      chapter.imageCount =
-        selectedFiles.value.length
+      images = []
+
+      for (
+        const file of
+        selectedFiles.value
+      ) {
+        if (
+          !file.type.startsWith(
+            'image/'
+          )
+        ) {
+          continue
+        }
+
+        const imageData =
+          await fileToDataURL(file)
+
+        images.push(imageData)
+      }
+    } else if (
+      editingChapterId.value !== null
+    ) {
+      /*
+       * ถ้าแก้ไข Chapter
+       * แต่ไม่ได้เลือกรูปใหม่
+       * ให้ใช้รูปเดิม
+       */
+
+      images = [
+        ...existingImages.value,
+      ]
     }
+
+    /* =========================
+       Edit Existing Chapter
+    ========================= */
+
+    if (
+      editingChapterId.value !== null
+    ) {
+      const chapter =
+        chapters.value.find(
+          (item) =>
+            item.id ===
+            editingChapterId.value
+        )
+
+      if (!chapter) {
+        return
+      }
+
+      chapter.number = number
+      chapter.title = title
+
+      chapter.images = images
+
+      chapter.imageCount =
+        images.length
+    }
+
+    /* =========================
+       Add New Chapter
+    ========================= */
+
+    else {
+      const newId =
+        chapters.value.length > 0
+          ? Math.max(
+              ...chapters.value.map(
+                (chapter) =>
+                  chapter.id
+              )
+            ) + 1
+          : 1
+
+      chapters.value.push({
+        id: newId,
+        number,
+        title,
+
+        imageCount:
+          images.length,
+
+        images,
+      })
+    }
+
+    /* =========================
+       Save
+    ========================= */
+
+    const saved =
+      saveChapters()
+
+    if (!saved) {
+      toast(
+        'พื้นที่จัดเก็บไม่เพียงพอ กรุณาใช้รูปขนาดเล็กลง'
+      )
+      return
+    }
+
+    updateLatestChapter()
+
+    closeChapterModal()
+
+    toast(
+      editingChapterId.value !== null
+        ? 'แก้ไขตอนเรียบร้อยแล้ว'
+        : 'เพิ่มตอนเรียบร้อยแล้ว'
+    )
+  } catch (error) {
+    console.error(
+      'Save chapter error:',
+      error
+    )
+
+    toast(
+      'ไม่สามารถบันทึกรูปภาพได้'
+    )
+  } finally {
+    isSavingChapter.value = false
   }
-
-  /* =========================
-     Add New Chapter
-  ========================= */
-
-  else {
-    const newId =
-      chapters.value.length > 0
-        ? Math.max(
-            ...chapters.value.map(
-              chapter => chapter.id
-            )
-          ) + 1
-        : 1
-
-    const imageCount =
-      selectedFiles.value.length > 0
-        ? selectedFiles.value.length
-        : chapterForm.imageCount
-
-    chapters.value.push({
-      id: newId,
-      number,
-      title,
-      imageCount
-    })
-  }
-
-  closeChapterModal()
 }
 
 /* =========================
@@ -807,17 +647,69 @@ function deleteChapter(
 ) {
   const chapter =
     chapters.value.find(
-      item => item.id === chapterId
+      (item) =>
+        item.id === chapterId
     )
 
   if (!chapter) {
     return
   }
 
-  chapters.value =
-    chapters.value.filter(
-      item => item.id !== chapterId
+  const confirmed =
+    window.confirm(
+      `ต้องการลบตอนที่ ${chapter.number} ใช่หรือไม่?`
     )
+
+  if (!confirmed) {
+    return
+  }
+
+  const index =
+    chapters.value.findIndex(
+      (item) =>
+        item.id === chapterId
+    )
+
+  if (index === -1) {
+    return
+  }
+
+  chapters.value.splice(index, 1)
+
+  saveChapters()
+
+  updateLatestChapter()
+
+  toast(
+    'ลบตอนเรียบร้อยแล้ว'
+  )
+}
+
+/* =========================
+   Update Latest Chapter
+========================= */
+
+function updateLatestChapter() {
+  if (!manga) {
+    return
+  }
+
+  const latest =
+    chapters.value.length > 0
+      ? Math.max(
+          ...chapters.value.map(
+            (chapter) =>
+              chapter.number
+          )
+        )
+      : 0
+
+  manga.latestChapter =
+    latest
+
+  mangaService.updateManga(
+    manga
+  )
 }
 
 /* =========================
@@ -843,17 +735,43 @@ function handleChapterImages(
       ? Array.from(input.files)
       : []
 
-  selectedFiles.value = files
+  const imageFiles =
+    files.filter((file) =>
+      file.type.startsWith(
+        'image/'
+      )
+    )
+
+  if (imageFiles.length === 0) {
+    selectedFiles.value = []
+
+    chapterForm.imageCount =
+      existingImages.value.length
+
+    toast(
+      'กรุณาเลือกไฟล์รูปภาพ'
+    )
+
+    input.value = ''
+
+    return
+  }
+
+  selectedFiles.value =
+    imageFiles
 
   clearPreviewUrls()
 
   previewUrls.value =
-    files.map(file =>
-      URL.createObjectURL(file)
+    imageFiles.map(
+      (file) =>
+        URL.createObjectURL(file)
     )
 
   chapterForm.imageCount =
-    files.length
+    imageFiles.length
+
+  input.value = ''
 }
 
 /* =========================
@@ -861,9 +779,11 @@ function handleChapterImages(
 ========================= */
 
 function clearPreviewUrls() {
-  previewUrls.value.forEach(url => {
-    URL.revokeObjectURL(url)
-  })
+  previewUrls.value.forEach(
+    (url) => {
+      URL.revokeObjectURL(url)
+    }
+  )
 
   previewUrls.value = []
 }
@@ -873,15 +793,23 @@ function clearPreviewUrls() {
 ========================= */
 
 function closeChapterModal() {
-  showChapterModal.value = false
+  if (isSavingChapter.value) {
+    return
+  }
 
-  editingChapterId.value = null
+  showChapterModal.value =
+    false
+
+  editingChapterId.value =
+    null
 
   chapterForm.number = 1
   chapterForm.title = ''
   chapterForm.imageCount = 0
 
   selectedFiles.value = []
+
+  existingImages.value = []
 
   clearPreviewUrls()
 
@@ -897,17 +825,601 @@ function closeChapterModal() {
 onBeforeUnmount(() => {
   clearPreviewUrls()
 
-  if (
-    mangaForm.cover.startsWith('blob:')
-  ) {
-    URL.revokeObjectURL(
-      mangaForm.cover
-    )
+  if (toastTimer) {
+    clearTimeout(toastTimer)
   }
 })
 </script>
 
+<template>
+  <div class="admin-page">
+
+    <!-- Header -->
+
+    <header class="admin-header">
+
+      <div class="header-left">
+
+        <button
+          class="back-btn"
+          @click="goBack"
+        >
+          ← กลับ
+        </button>
+
+        <div>
+          <h1>
+            จัดการมังงะ
+          </h1>
+
+          <p>
+            จัดการข้อมูลมังงะและตอนทั้งหมด
+          </p>
+        </div>
+
+      </div>
+
+    </header>
+
+    <main class="admin-container">
+
+      <!-- Manga Information -->
+
+      <section class="manga-section">
+
+        <div class="section-header">
+
+          <div>
+            <h2>
+              ข้อมูลมังงะ
+            </h2>
+
+            <p>
+              แก้ไขข้อมูลพื้นฐานของมังงะ
+            </p>
+          </div>
+
+          <button
+            class="primary-btn"
+            @click="saveManga"
+          >
+            บันทึกข้อมูล
+          </button>
+
+        </div>
+
+        <div class="manga-content">
+
+          <!-- Cover -->
+
+          <div class="cover-section">
+
+            <img
+              :src="mangaForm.cover"
+              :alt="mangaForm.title"
+              class="manga-cover"
+            />
+
+            <label
+              class="upload-cover-btn"
+            >
+              เปลี่ยนรูปปก
+
+              <input
+                type="file"
+                accept="image/*"
+                @change="handleCoverUpload"
+                hidden
+              />
+            </label>
+
+          </div>
+
+          <!-- Form -->
+
+          <div class="manga-form">
+
+            <div class="form-group">
+
+              <label>
+                ชื่อเรื่อง
+              </label>
+
+              <input
+                v-model="mangaForm.title"
+                type="text"
+                placeholder="ชื่อมังงะ"
+              />
+
+            </div>
+
+            <div class="form-group">
+
+              <label>
+                ผู้แต่ง
+              </label>
+
+              <input
+                v-model="mangaForm.author"
+                type="text"
+                placeholder="ชื่อผู้แต่ง"
+              />
+
+            </div>
+
+            <div class="form-row">
+
+              <div class="form-group">
+
+                <label>
+                  หมวดหมู่
+                </label>
+
+                <input
+                  v-model="mangaForm.category"
+                  type="text"
+                  placeholder="หมวดหมู่"
+                />
+
+              </div>
+
+              <div class="form-group">
+
+                <label>
+                  สถานะ
+                </label>
+
+                <select
+                  v-model="mangaForm.status"
+                >
+
+                  <option
+                    value="กำลังดำเนินเรื่อง"
+                  >
+                    กำลังดำเนินเรื่อง
+                  </option>
+
+                  <option
+                    value="จบแล้ว"
+                  >
+                    จบแล้ว
+                  </option>
+
+                </select>
+
+              </div>
+
+            </div>
+
+            <div class="form-group">
+
+              <label>
+                คำอธิบาย
+              </label>
+
+              <textarea
+                v-model="mangaForm.description"
+                rows="5"
+                placeholder="คำอธิบายมังงะ"
+              ></textarea>
+
+            </div>
+
+          </div>
+
+        </div>
+
+      </section>
+
+      <!-- Chapter Section -->
+
+      <section class="chapter-section">
+
+        <div class="section-header">
+
+          <div>
+
+            <h2>
+              จัดการตอน
+            </h2>
+
+            <p>
+              จำนวนทั้งหมด
+              {{ chapters.length }}
+              ตอน
+            </p>
+
+          </div>
+
+          <button
+            class="primary-btn"
+            @click="openAddChapterForm"
+          >
+            + เพิ่มตอน
+          </button>
+
+        </div>
+
+        <!-- Chapter List -->
+
+        <div
+          v-if="chapters.length > 0"
+          class="chapter-list"
+        >
+
+          <div
+            v-for="chapter in sortedChapters"
+            :key="chapter.id"
+            class="chapter-card"
+          >
+
+            <div class="chapter-info">
+
+              <div
+                class="chapter-number"
+              >
+                ตอน {{ chapter.number }}
+              </div>
+
+              <div
+                class="chapter-title"
+              >
+                {{ chapter.title }}
+              </div>
+
+              <div
+                class="chapter-images"
+              >
+                {{ chapter.imageCount }}
+                รูป
+              </div>
+
+            </div>
+
+            <div class="chapter-actions">
+
+              <button
+                class="edit-btn"
+                @click="
+                  openEditChapterForm(
+                    chapter
+                  )
+                "
+              >
+                แก้ไข
+              </button>
+
+              <button
+                class="delete-btn"
+                @click="
+                  deleteChapter(
+                    chapter.id
+                  )
+                "
+              >
+                ลบ
+              </button>
+
+            </div>
+
+          </div>
+
+        </div>
+
+        <!-- Empty -->
+
+        <div
+          v-else
+          class="empty-state"
+        >
+
+          <h3>
+            ยังไม่มีตอน
+          </h3>
+
+          <p>
+            กดปุ่ม "เพิ่มตอน"
+            เพื่อเพิ่มตอนแรก
+          </p>
+
+          <button
+            class="primary-btn"
+            @click="openAddChapterForm"
+          >
+            + เพิ่มตอนแรก
+          </button>
+
+        </div>
+
+      </section>
+
+    </main>
+
+    <!-- Chapter Modal -->
+
+    <div
+      v-if="showChapterModal"
+      class="modal-overlay"
+      @click.self="closeChapterModal"
+    >
+
+      <div class="modal">
+
+        <!-- Modal Header -->
+
+        <div class="modal-header">
+
+          <div>
+
+            <h2>
+              {{
+                editingChapterId !== null
+                  ? 'แก้ไขตอน'
+                  : 'เพิ่มตอนใหม่'
+              }}
+            </h2>
+
+            <p>
+              {{
+                editingChapterId !== null
+                  ? 'แก้ไขข้อมูลของตอน'
+                  : 'เพิ่มตอนใหม่ลงในมังงะ'
+              }}
+            </p>
+
+          </div>
+
+          <button
+            class="close-btn"
+            :disabled="isSavingChapter"
+            @click="closeChapterModal"
+          >
+            ×
+          </button>
+
+        </div>
+
+        <!-- Modal Body -->
+
+        <div class="modal-body">
+
+          <!-- Chapter Number -->
+
+          <div class="form-group">
+
+            <label>
+              เลขตอน
+            </label>
+
+            <input
+              v-model.number="
+                chapterForm.number
+              "
+              type="number"
+              min="1"
+              step="0.1"
+              placeholder="เช่น 1, 2, 3, 10.5, 101"
+            />
+
+            <small>
+              สามารถเพิ่มตอนต่อไปได้ไม่จำกัด
+            </small>
+
+          </div>
+
+          <!-- Chapter Title -->
+
+          <div class="form-group">
+
+            <label>
+              ชื่อตอน
+            </label>
+
+            <input
+              v-model="
+                chapterForm.title
+              "
+              type="text"
+              placeholder="เช่น การเริ่มต้น"
+            />
+
+          </div>
+
+          <!-- Images -->
+
+          <div class="form-group">
+
+            <label>
+              รูปภาพในตอน
+            </label>
+
+            <div class="upload-area">
+
+              <input
+                ref="fileInput"
+                type="file"
+                accept="image/*"
+                multiple
+                @change="
+                  handleChapterImages
+                "
+                hidden
+              />
+
+              <button
+                type="button"
+                class="upload-btn"
+                @click="
+                  triggerFileInput
+                "
+              >
+                เลือกรูปภาพ
+              </button>
+
+              <p>
+                {{
+                  selectedFiles.length > 0
+                    ? `เลือกแล้ว ${selectedFiles.length} รูป`
+                    : editingChapterId !== null &&
+                      existingImages.length > 0
+                      ? `ใช้รูปเดิม ${existingImages.length} รูป`
+                      : 'ยังไม่ได้เลือกรูปภาพ'
+                }}
+              </p>
+
+            </div>
+
+          </div>
+
+          <!-- Existing Images -->
+
+          <div
+            v-if="
+              editingChapterId !== null &&
+              existingImages.length > 0 &&
+              previewUrls.length === 0
+            "
+            class="preview-section"
+          >
+
+            <h3>
+              รูปภาพปัจจุบัน
+            </h3>
+
+            <div class="preview-grid">
+
+              <div
+                v-for="(
+                  image,
+                  index
+                ) in existingImages"
+                :key="
+                  `existing-${index}`
+                "
+                class="preview-item"
+              >
+
+                <img
+                  :src="image"
+                  :alt="
+                    `รูปปัจจุบันที่ ${
+                      index + 1
+                    }`
+                  "
+                />
+
+                <span>
+                  {{ index + 1 }}
+                </span>
+
+              </div>
+
+            </div>
+
+          </div>
+
+          <!-- New Image Preview -->
+
+          <div
+            v-if="
+              previewUrls.length > 0
+            "
+            class="preview-section"
+          >
+
+            <h3>
+              ตัวอย่างรูปภาพใหม่
+            </h3>
+
+            <div class="preview-grid">
+
+              <div
+                v-for="(
+                  url,
+                  index
+                ) in previewUrls"
+                :key="url"
+                class="preview-item"
+              >
+
+                <img
+                  :src="url"
+                  :alt="
+                    `รูปที่ ${
+                      index + 1
+                    }`
+                  "
+                />
+
+                <span>
+                  {{ index + 1 }}
+                </span>
+
+              </div>
+
+            </div>
+
+          </div>
+
+        </div>
+
+        <!-- Modal Footer -->
+
+        <div class="modal-footer">
+
+          <button
+            class="secondary-btn"
+            :disabled="isSavingChapter"
+            @click="
+              closeChapterModal
+            "
+          >
+            ยกเลิก
+          </button>
+
+          <button
+            class="primary-btn"
+            :disabled="isSavingChapter"
+            @click="saveChapter"
+          >
+
+            {{
+              isSavingChapter
+                ? 'กำลังบันทึก...'
+                : editingChapterId !== null
+                  ? 'บันทึกการแก้ไข'
+                  : 'เพิ่มตอน'
+            }}
+
+          </button>
+
+        </div>
+
+      </div>
+
+    </div>
+
+    <!-- Toast -->
+
+    <transition name="toast">
+
+      <div
+        v-if="showToast"
+        class="toast"
+      >
+        {{ toastMessage }}
+      </div>
+
+    </transition>
+
+  </div>
+</template>
+
 <style scoped>
+* {
+  box-sizing: border-box;
+}
+
 /* =========================
    Page
 ========================= */
@@ -1035,9 +1547,17 @@ onBeforeUnmount(() => {
   color: #ffffff;
 }
 
-.primary-btn:hover {
+.primary-btn:hover:not(:disabled) {
   background: #6d28d9;
   transform: translateY(-1px);
+}
+
+.primary-btn:disabled,
+.secondary-btn:disabled,
+.close-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
 }
 
 .secondary-btn {
@@ -1045,7 +1565,7 @@ onBeforeUnmount(() => {
   color: #18181b;
 }
 
-.secondary-btn:hover {
+.secondary-btn:hover:not(:disabled) {
   background: #e5e5e5;
 }
 
@@ -1168,7 +1688,8 @@ onBeforeUnmount(() => {
 .form-group textarea:focus {
   border-color: #7c3aed;
   box-shadow:
-    0 0 0 3px rgba(124, 58, 237, 0.1);
+    0 0 0 3px
+    rgba(124, 58, 237, 0.1);
 }
 
 .form-group textarea {
@@ -1271,7 +1792,7 @@ onBeforeUnmount(() => {
 .modal-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(24, 24, 27, 0.65);
+  background: transparent;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1287,7 +1808,9 @@ onBeforeUnmount(() => {
   background: #ffffff;
   border-radius: 14px;
   box-shadow:
-    0 20px 60px rgba(0, 0, 0, 0.2);
+    0 20px 60px
+    rgba(0, 0, 0, 0.2);
+  border: 1px solid #e5e5e5;
 }
 
 /* =========================
@@ -1322,10 +1845,11 @@ onBeforeUnmount(() => {
   width: 34px;
   height: 34px;
   border-radius: 8px;
-  transition: background 0.2s ease;
+  transition:
+    background 0.2s ease;
 }
 
-.close-btn:hover {
+.close-btn:hover:not(:disabled) {
   background: #eeeeee;
 }
 
@@ -1418,6 +1942,36 @@ onBeforeUnmount(() => {
   border-radius: 5px;
   padding: 3px 7px;
   font-size: 11px;
+}
+
+/* =========================
+   Toast
+========================= */
+
+.toast {
+  position: fixed;
+  right: 25px;
+  bottom: 25px;
+  z-index: 2000;
+  padding: 13px 18px;
+  background: #18181b;
+  border-radius: 8px;
+  color: #ffffff;
+  font-size: 14px;
+  box-shadow:
+    0 10px 25px
+    rgba(0, 0, 0, 0.15);
+}
+
+.toast-enter-active,
+.toast-leave-active {
+  transition: 0.25s;
+}
+
+.toast-enter-from,
+.toast-leave-to {
+  opacity: 0;
+  transform: translateY(10px);
 }
 
 /* =========================

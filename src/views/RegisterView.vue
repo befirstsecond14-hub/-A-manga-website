@@ -39,8 +39,6 @@ function register() {
   console.log('Email:', email.value)
   console.log('Password:', password.value)
 
-  alert('สมัครสมาชิกสำเร็จ')
-
   router.push('/login')
 }
 

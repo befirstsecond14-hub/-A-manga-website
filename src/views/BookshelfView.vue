@@ -4,7 +4,6 @@ import { useAuthStore } from '@/stores/auth'
 import { useBookshelfStore } from '@/stores/bookshelf'
 
 const router = useRouter()
-
 const authStore = useAuthStore()
 const bookshelfStore = useBookshelfStore()
 
@@ -16,28 +15,12 @@ function openManga(id: number) {
   router.push(`/manga/${id}`)
 }
 
-function continueReading(
-  id: number,
-  chapter: number,
-) {
-  router.push(
-    `/manga/${id}/chapter/${chapter}`,
-  )
+function continueReading(id: number, chapter: number) {
+  router.push(`/manga/${id}/chapter/${chapter}`)
 }
 
 function removeFromBookshelf(id: number) {
-  const manga = bookshelfStore.mangaList.find(
-    (item) => item.id === id,
-  )
-
-  if (!manga) return
-
-  const confirmed = confirm(
-    `ต้องการนำ "${manga.title}" ออกจากชั้นหนังสือใช่หรือไม่?`,
-  )
-
-  if (!confirmed) return
-
+  // ลบออกได้เลยโดยไม่ต้องมี confirm dialog
   bookshelfStore.removeFromBookshelf(id)
 }
 
@@ -175,9 +158,7 @@ function logout() {
               <button
                 type="button"
                 class="remove-button"
-                @click="
-                  removeFromBookshelf(manga.id)
-                "
+                @click="removeFromBookshelf(manga.id)"
               >
                 เอาออก
               </button>
@@ -323,8 +304,7 @@ function logout() {
 
 .manga-grid {
   display: grid;
-  grid-template-columns:
-    repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 22px;
 }
 
@@ -575,8 +555,7 @@ function logout() {
   }
 
   .manga-grid {
-    grid-template-columns:
-      repeat(2, minmax(0, 1fr));
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 18px;
   }
 }
@@ -592,8 +571,7 @@ function logout() {
   }
 
   .manga-grid {
-    grid-template-columns:
-      repeat(2, minmax(0, 1fr));
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 12px;
   }
 

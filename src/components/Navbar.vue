@@ -1,11 +1,14 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 
 const router = useRouter()
 const route = useRoute()
 const authStore = useAuthStore()
+
+// Search
+const searchText = ref('')
 
 // ซ่อน Navbar ในหน้า Admin
 const isAdminPage = computed(() => {
@@ -43,6 +46,28 @@ function goBookshelf() {
 // ไปหน้า Login
 function goLogin() {
   router.push('/login')
+}
+
+// ไปหน้า Admin
+function goAdmin() {
+  router.push('/admin')
+}
+
+// ค้นหามังงะ
+function searchManga() {
+  const keyword = searchText.value.trim()
+
+  if (!keyword) {
+    router.push('/category')
+    return
+  }
+
+  router.push({
+    path: '/category',
+    query: {
+      search: keyword,
+    },
+  })
 }
 
 // ออกจากระบบ
@@ -106,8 +131,10 @@ function logout() {
         <!-- Search -->
         <div class="search-box">
           <input
+            v-model="searchText"
             type="text"
             placeholder="ค้นหามังงะ..."
+            @keyup.enter="searchManga"
           />
         </div>
 
@@ -126,10 +153,18 @@ function logout() {
           v-else
           class="user-menu"
         >
-          <span class="username">
-            {{ authStore.username }}
-          </span>
 
+          <!-- แสดงเฉพาะ Admin -->
+          <button
+            v-if="authStore.username === 'admin'"
+            type="button"
+            class="admin-button"
+            @click="goAdmin"
+          >
+            admin
+          </button>
+
+          <!-- ออกจากระบบ -->
           <button
             type="button"
             class="logout-button"
@@ -137,15 +172,16 @@ function logout() {
           >
             ออกจากระบบ
           </button>
+
         </div>
 
       </div>
+
     </div>
   </header>
 </template>
 
 <style scoped>
-
 /* ========================================
    Navbar
 ======================================== */
@@ -153,15 +189,12 @@ function logout() {
 .user-navbar {
   width: 100%;
   height: 64px;
-
   background: #ffffff;
   border-bottom: 1px solid #e5e5e5;
-
   position: sticky;
   top: 0;
   z-index: 1000;
 }
-
 
 /* ========================================
    Navbar Inner
@@ -171,16 +204,11 @@ function logout() {
   width: 92%;
   max-width: 1400px;
   height: 100%;
-
   margin: 0 auto;
-
   display: flex;
   align-items: center;
-
-  /* ให้ทุกส่วนเรียงติดกัน */
   gap: 28px;
 }
-
 
 /* ========================================
    Logo
@@ -188,17 +216,12 @@ function logout() {
 
 .logo {
   flex-shrink: 0;
-
   padding: 0;
-
   border: none;
   background: transparent;
-
   font-size: 28px;
   font-weight: 800;
-
   color: #111111;
-
   cursor: pointer;
   white-space: nowrap;
 }
@@ -211,7 +234,6 @@ function logout() {
   opacity: 0.9;
 }
 
-
 /* ========================================
    Menu
 ======================================== */
@@ -219,26 +241,18 @@ function logout() {
 .nav-menu {
   display: flex;
   align-items: center;
-
   gap: 24px;
-
   flex-shrink: 0;
 }
 
 .nav-link {
   position: relative;
-
   padding: 8px 3px;
-
   border: none;
   background: transparent;
-
   color: #555555;
-
   font-size: 15px;
-
   cursor: pointer;
-
   transition: color 0.2s ease;
 }
 
@@ -251,24 +265,16 @@ function logout() {
   font-weight: 600;
 }
 
-
-/* เส้นใต้เมนู */
 .nav-link.active::after {
   content: '';
-
   position: absolute;
-
   left: 0;
   right: 0;
   bottom: 0;
-
   height: 2px;
-
   background: #7c3aed;
-
   border-radius: 2px;
 }
-
 
 /* ========================================
    ด้านขวา
@@ -276,15 +282,11 @@ function logout() {
 
 .navbar-right {
   margin-left: auto;
-
   display: flex;
   align-items: center;
-
   gap: 12px;
-
   flex-shrink: 0;
 }
-
 
 /* ========================================
    Search
@@ -298,18 +300,12 @@ function logout() {
 .search-box input {
   width: 215px;
   height: 42px;
-
   padding: 0 14px;
-
   border: 1px solid #d8d8d8;
   border-radius: 9px;
-
   outline: none;
-
   font-size: 14px;
-
   color: #333333;
-
   transition:
     border-color 0.2s ease,
     box-shadow 0.2s ease;
@@ -317,7 +313,6 @@ function logout() {
 
 .search-box input:focus {
   border-color: #7c3aed;
-
   box-shadow:
     0 0 0 3px rgba(124, 58, 237, 0.08);
 }
@@ -326,30 +321,21 @@ function logout() {
   color: #999999;
 }
 
-
 /* ========================================
    Login
 ======================================== */
 
 .login-button {
   height: 42px;
-
   padding: 0 20px;
-
   border: none;
   border-radius: 9px;
-
   background: #7c3aed;
-
   color: #ffffff;
-
   font-size: 14px;
   font-weight: 600;
-
   cursor: pointer;
-
   white-space: nowrap;
-
   transition:
     background 0.2s ease,
     transform 0.2s ease;
@@ -357,35 +343,39 @@ function logout() {
 
 .login-button:hover {
   background: #6d28d9;
-
   transform: translateY(-1px);
 }
 
-
 /* ========================================
-   User
+   User Menu
 ======================================== */
 
 .user-menu {
   display: flex;
   align-items: center;
-
   gap: 14px;
 }
 
-.username {
-  max-width: 140px;
+/* ========================================
+   Admin Button
+======================================== */
 
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-
+.admin-button {
+  padding: 6px 0;
+  border: none;
+  background: transparent;
+  color: #7c3aed;
   font-size: 14px;
   font-weight: 600;
-
-  color: #333333;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: color 0.2s ease;
 }
 
+.admin-button:hover {
+  color: #6d28d9;
+  text-decoration: underline;
+}
 
 /* ========================================
    Logout
@@ -393,31 +383,24 @@ function logout() {
 
 .logout-button {
   padding: 6px 0;
-
   border: none;
   background: transparent;
-
   color: #777777;
-
   font-size: 13px;
-
   cursor: pointer;
-
   white-space: nowrap;
+  transition: color 0.2s ease;
 }
 
 .logout-button:hover {
   color: #d32f2f;
 }
 
-
 /* ========================================
    Responsive
 ======================================== */
 
-/* หน้าจอขนาดกลาง */
 @media (max-width: 1100px) {
-
   .navbar-inner {
     width: 94%;
     gap: 20px;
@@ -432,10 +415,7 @@ function logout() {
   }
 }
 
-
-/* Tablet */
 @media (max-width: 850px) {
-
   .navbar-inner {
     width: 94%;
     gap: 16px;
@@ -462,23 +442,16 @@ function logout() {
   }
 }
 
-
-/* Tablet เล็ก */
 @media (max-width: 700px) {
-
   .user-navbar {
     height: auto;
   }
 
   .navbar-inner {
     width: 92%;
-
     min-height: 64px;
-
     padding: 10px 0;
-
     flex-wrap: wrap;
-
     gap: 8px;
   }
 
@@ -496,21 +469,14 @@ function logout() {
 
   .nav-menu {
     order: 3;
-
     width: 100%;
-
     justify-content: center;
-
     padding-top: 4px;
-
     gap: 25px;
   }
 }
 
-
-/* Mobile */
 @media (max-width: 450px) {
-
   .navbar-inner {
     width: 92%;
   }
@@ -521,9 +487,7 @@ function logout() {
 
   .login-button {
     height: 38px;
-
     padding: 0 13px;
-
     font-size: 13px;
   }
 
@@ -535,5 +499,4 @@ function logout() {
     gap: 18px;
   }
 }
-
 </style>

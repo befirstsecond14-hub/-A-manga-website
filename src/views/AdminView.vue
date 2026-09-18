@@ -1,129 +1,72 @@
 <script setup lang="ts">
 import { computed, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
+import { Manga } from '../models/Manga'
+import { MangaService } from '../services/MangaService'
 
 const router = useRouter()
-
-// =========================
-// Type
-// =========================
+const mangaService = new MangaService()
 
 type MangaStatus = 'กำลังดำเนินเรื่อง' | 'จบแล้ว'
 
-interface Manga {
-  id: number
-  title: string
-  author: string
-  category: string
-  status: MangaStatus
-  description: string
-  cover: string
-  latestChapter: number
-}
-
-// =========================
-// Storage
-// =========================
-
-const STORAGE_KEY = 'mangaverse_manga'
-
-const defaultMangaList: Manga[] = [
-  {
-    id: 1,
-    title: 'One Piece',
-    author: 'Eiichiro Oda',
-    category: 'Action',
-    status: 'กำลังดำเนินเรื่อง',
-    description:
-      'เรื่องราวของการผจญภัยของลูฟี่และกลุ่มโจรสลัดหมวกฟาง',
-    cover:
-      'https://images.unsplash.com/photo-1613376023733-0a73315d9b06?w=600',
-    latestChapter: 100,
-  },
-  {
-    id: 2,
-    title: 'Solo Leveling',
-    author: 'Chugong',
-    category: 'Fantasy',
-    status: 'จบแล้ว',
-    description:
-      'เรื่องราวของซองจินอู ผู้ที่เริ่มต้นจากนักล่าที่อ่อนแอที่สุด',
-    cover:
-      'https://images.unsplash.com/photo-1578632767115-351597cf2477?w=600',
-    latestChapter: 100,
-  },
-  {
-    id: 3,
-    title: 'Naruto',
-    author: 'Masashi Kishimoto',
-    category: 'Action',
-    status: 'จบแล้ว',
-    description:
-      'เรื่องราวของนินจาหนุ่มนารูโตะที่ต้องการเป็นโฮคาเงะ',
-    cover:
-      'https://images.unsplash.com/photo-1560419015-7c427e8ae5ba?w=600',
-    latestChapter: 100,
-  },
-  {
-    id: 4,
-    title: 'Demon Slayer',
-    author: 'Koyoharu Gotouge',
-    category: 'Action',
-    status: 'จบแล้ว',
-    description:
-      'เรื่องราวของทันจิโร่ที่ออกเดินทางเพื่อช่วยน้องสาว',
-    cover:
-      'https://images.unsplash.com/photo-1607604276583-eef5d076aa5f?w=600',
-    latestChapter: 100,
-  },
+const defaultMangaList = [
+  new Manga(
+    1,
+    'One Piece',
+    'Eiichiro Oda',
+    'เรื่องราวของการผจญภัยของลูฟี่และกลุ่มโจรสลัดหมวกฟาง',
+    'Action',
+    100,
+    'กำลังดำเนินเรื่อง',
+    'https://images.unsplash.com/photo-1613376023733-0a73315d9b06?w=600'
+  ),
+  new Manga(
+    2,
+    'Solo Leveling',
+    'Chugong',
+    'เรื่องราวของซองจินอู ผู้ที่เริ่มต้นจากนักล่าที่อ่อนแอที่สุด',
+    'Fantasy',
+    100,
+    'จบแล้ว',
+    'https://images.unsplash.com/photo-1578632767115-351597cf2477?w=600'
+  ),
+  new Manga(
+    3,
+    'Naruto',
+    'Masashi Kishimoto',
+    'เรื่องราวของนินจาหนุ่มนารูโตะที่ต้องการเป็นโฮคาเงะ',
+    'Action',
+    100,
+    'จบแล้ว',
+    'https://images.unsplash.com/photo-1560419015-7c427e8ae5ba?w=600'
+  ),
+  new Manga(
+    4,
+    'Demon Slayer',
+    'Koyoharu Gotouge',
+    'เรื่องราวของทันจิโร่ที่ออกเดินทางเพื่อช่วยน้องสาว',
+    'Action',
+    100,
+    'จบแล้ว',
+    'https://images.unsplash.com/photo-1607604276583-eef5d076aa5f?w=600'
+  ),
 ]
 
-// =========================
-// Load / Save
-// =========================
-
 function loadManga(): Manga[] {
-  const saved = localStorage.getItem(STORAGE_KEY)
+  const manga = mangaService.getAllManga()
 
-  if (!saved) {
-    localStorage.setItem(
-      STORAGE_KEY,
-      JSON.stringify(defaultMangaList),
-    )
+  if (manga.length === 0) {
+    defaultMangaList.forEach((item) => {
+      mangaService.createManga(item)
+    })
 
-    return [...defaultMangaList]
+    return mangaService.getAllManga()
   }
 
-  try {
-    const parsed = JSON.parse(saved)
-
-    if (!Array.isArray(parsed)) {
-      return [...defaultMangaList]
-    }
-
-    return parsed
-  } catch {
-    localStorage.setItem(
-      STORAGE_KEY,
-      JSON.stringify(defaultMangaList),
-    )
-
-    return [...defaultMangaList]
-  }
+  return manga
 }
 
 const mangaList = ref<Manga[]>(loadManga())
-
-function saveManga() {
-  localStorage.setItem(
-    STORAGE_KEY,
-    JSON.stringify(mangaList.value),
-  )
-}
-
-// =========================
-// Search
-// =========================
 
 const searchText = ref('')
 
@@ -143,36 +86,26 @@ const filteredManga = computed(() => {
   })
 })
 
-// =========================
-// Statistics
-// =========================
-
-const mangaTotal = computed(() => {
-  return mangaList.value.length
-})
+const mangaTotal = computed(() => mangaList.value.length)
 
 const totalChapters = computed(() => {
   return mangaList.value.reduce(
     (total, manga) => total + manga.latestChapter,
-    0,
+    0
   )
 })
 
 const ongoingTotal = computed(() => {
   return mangaList.value.filter(
-    (manga) => manga.status === 'กำลังดำเนินเรื่อง',
+    (manga) => manga.status === 'กำลังดำเนินเรื่อง'
   ).length
 })
 
 const completedTotal = computed(() => {
   return mangaList.value.filter(
-    (manga) => manga.status === 'จบแล้ว',
+    (manga) => manga.status === 'จบแล้ว'
   ).length
 })
-
-// =========================
-// Modal
-// =========================
 
 const showAddModal = ref(false)
 
@@ -192,10 +125,6 @@ const form = reactive<{
   description: '',
 })
 
-// =========================
-// Toast
-// =========================
-
 const showToast = ref(false)
 const toastMessage = ref('')
 
@@ -207,10 +136,6 @@ function toast(message: string) {
     showToast.value = false
   }, 2500)
 }
-
-// =========================
-// Modal Functions
-// =========================
 
 function openAddModal() {
   form.title = ''
@@ -226,10 +151,6 @@ function openAddModal() {
 function closeAddModal() {
   showAddModal.value = false
 }
-
-// =========================
-// Add Manga
-// =========================
 
 function addManga() {
   if (!form.title.trim()) {
@@ -247,69 +168,45 @@ function addManga() {
     return
   }
 
-  const newManga: Manga = {
-    id: Date.now(),
-    title: form.title.trim(),
-    author: form.author.trim(),
-    category: form.category.trim(),
-    status: form.status,
-    cover:
-      form.cover.trim() ||
-      'https://images.unsplash.com/photo-1613376023733-0a73315d9b06?w=600',
-    description: form.description.trim(),
-    latestChapter: 0,
-  }
+  const newManga = new Manga(
+    Date.now(),
+    form.title.trim(),
+    form.author.trim(),
+    form.description.trim(),
+    form.category.trim(),
+    0,
+    form.status,
+    form.cover.trim() ||
+      'https://images.unsplash.com/photo-1613376023733-0a73315d9b06?w=600'
+  )
 
-  mangaList.value.push(newManga)
-
-  saveManga()
+  mangaService.createManga(newManga)
+  mangaList.value = mangaService.getAllManga()
 
   closeAddModal()
-
   toast('เพิ่มมังงะเรียบร้อยแล้ว')
 }
-
-// =========================
-// Manage Manga
-// =========================
 
 function manageManga(id: number) {
   router.push(`/admin/manga/${id}`)
 }
-
-// =========================
-// Delete Manga
-// =========================
-
 function deleteManga(id: number) {
-  const manga = mangaList.value.find(
-    (item) => item.id === id,
-  )
+  const manga = mangaService.getMangaById(id)
 
   if (!manga) {
     return
   }
 
-  const confirmDelete = window.confirm(
-    `ต้องการลบ "${manga.title}" หรือไม่?`,
-  )
+  const deleted = mangaService.deleteManga(id)
 
-  if (!confirmDelete) {
+  if (!deleted) {
+    toast('ไม่สามารถลบมังงะได้')
     return
   }
 
-  mangaList.value = mangaList.value.filter(
-    (item) => item.id !== id,
-  )
-
-  saveManga()
-
-  toast('ลบมังงะเรียบร้อยแล้ว')
+  mangaList.value = mangaService.getAllManga()
+  toast(`ลบ "${manga.title}" เรียบร้อยแล้ว`)
 }
-
-// =========================
-// Navigation
-// =========================
 
 function backToWebsite() {
   router.push('/')
@@ -318,340 +215,224 @@ function backToWebsite() {
 
 <template>
   <div class="admin-page">
-
-    <!-- =========================
-         Admin Header
-    ========================== -->
-
+    <!-- Header -->
     <header class="admin-header">
-      <div class="header-inner">
-
-        <div class="brand">
-          <div class="brand-name">
-            Manga<span>Verse</span>
-          </div>
-
-          <div class="admin-badge">
-            ADMIN
-          </div>
+      <div class="header-left">
+        <div class="logo">
+          Manga<span>Verse</span>
         </div>
 
+        <div class="admin-label">
+          Admin
+        </div>
+      </div>
+
+      <div class="header-right">
         <button
-          type="button"
           class="back-button"
           @click="backToWebsite"
         >
-          ← กลับเว็บไซต์
+          กลับหน้าเว็บไซต์
         </button>
-
       </div>
     </header>
 
-    <!-- =========================
-         Main
-    ========================== -->
-
+    <!-- Main -->
     <main class="admin-main">
-
-      <!-- Page Header -->
-
-      <section class="page-header">
-
+      <div class="page-title">
         <div>
-          <p class="section-label">
-            MANGAVERSE ADMIN
-          </p>
-
-          <h1>
-            จัดการมังงะ
-          </h1>
-
-          <p class="page-description">
-            เพิ่ม แก้ไข และจัดการข้อมูลมังงะภายในระบบ
-          </p>
+          <h1>จัดการมังงะ</h1>
+          <p>จัดการข้อมูลมังงะภายในระบบ</p>
         </div>
 
         <button
-          type="button"
           class="add-button"
           @click="openAddModal"
         >
-          <span>＋</span>
-          เพิ่มมังงะ
+          + เพิ่มมังงะ
         </button>
+      </div>
 
-      </section>
-
-      <!-- =========================
-           Statistics
-      ========================== -->
-
-      <section class="stats-grid">
-
+      <!-- Statistics -->
+      <section class="statistics">
         <div class="stat-card">
-          <div class="stat-icon">
+          <div class="stat-icon purple">
             M
           </div>
 
-          <div>
-            <p>มังงะทั้งหมด</p>
+          <div class="stat-content">
+            <span>มังงะทั้งหมด</span>
             <strong>{{ mangaTotal }}</strong>
           </div>
         </div>
 
         <div class="stat-card">
-          <div class="stat-icon">
+          <div class="stat-icon blue">
             C
           </div>
 
-          <div>
-            <p>จำนวนตอน</p>
+          <div class="stat-content">
+            <span>ตอนทั้งหมด</span>
             <strong>{{ totalChapters }}</strong>
           </div>
         </div>
 
         <div class="stat-card">
-          <div class="stat-icon">
+          <div class="stat-icon green">
             O
           </div>
 
-          <div>
-            <p>กำลังดำเนินเรื่อง</p>
+          <div class="stat-content">
+            <span>กำลังดำเนินเรื่อง</span>
             <strong>{{ ongoingTotal }}</strong>
           </div>
         </div>
 
         <div class="stat-card">
-          <div class="stat-icon">
+          <div class="stat-icon gray">
             ✓
           </div>
 
-          <div>
-            <p>จบแล้ว</p>
+          <div class="stat-content">
+            <span>จบแล้ว</span>
             <strong>{{ completedTotal }}</strong>
           </div>
         </div>
-
       </section>
 
-      <!-- =========================
-           Search
-      ========================== -->
-
-      <section class="toolbar">
-
-        <div class="search-box">
-
-          <span class="search-icon">
-            🔍
-          </span>
-
-          <input
-            v-model="searchText"
-            type="text"
-            placeholder="ค้นหาชื่อมังงะ ผู้แต่ง หรือหมวดหมู่..."
-          />
-
-        </div>
-
-      </section>
-
-      <!-- =========================
-           Manga List
-      ========================== -->
-
+      <!-- Manga Section -->
       <section class="manga-section">
-
-        <div class="section-heading">
-
+        <div class="section-header">
           <div>
-            <h2>
-              รายการมังงะ
-            </h2>
-
-            <p>
-              มังงะที่อยู่ในระบบทั้งหมด
-            </p>
+            <h2>รายการมังงะ</h2>
+            <p>มังงะทั้งหมด {{ mangaTotal }} เรื่อง</p>
           </div>
 
-          <span class="result-count">
-            {{ filteredManga.length }} รายการ
-          </span>
-
-        </div>
-
-        <!-- Empty -->
-
-        <div
-          v-if="filteredManga.length === 0"
-          class="empty-state"
-        >
-
-          <div class="empty-icon">
-            📚
+          <div class="search-box">
+            <input
+              v-model="searchText"
+              type="text"
+              placeholder="ค้นหาชื่อมังงะ ผู้แต่ง หรือหมวดหมู่..."
+            />
           </div>
-
-          <h3>
-            ไม่พบมังงะ
-          </h3>
-
-          <p>
-            ลองเปลี่ยนคำค้นหาใหม่
-          </p>
-
         </div>
 
-        <!-- List -->
+        <!-- Manga Table -->
+        <div class="table-wrapper">
+          <table class="manga-table">
+            <thead>
+              <tr>
+                <th>มังงะ</th>
+                <th>ผู้แต่ง</th>
+                <th>หมวดหมู่</th>
+                <th>ตอนล่าสุด</th>
+                <th>สถานะ</th>
+                <th>จัดการ</th>
+              </tr>
+            </thead>
 
-        <div
-          v-else
-          class="manga-list"
-        >
+            <tbody>
+              <tr
+                v-for="manga in filteredManga"
+                :key="manga.id"
+              >
+                <td>
+                  <div class="manga-info">
+                    <img
+                      :src="manga.cover"
+                      :alt="manga.title"
+                      class="manga-cover"
+                    />
 
-          <article
-            v-for="manga in filteredManga"
-            :key="manga.id"
-            class="manga-card"
-          >
+                    <div>
+                      <strong>{{ manga.title }}</strong>
+                      <span>{{ manga.description }}</span>
+                    </div>
+                  </div>
+                </td>
 
-            <!-- Cover -->
+                <td>
+                  {{ manga.author }}
+                </td>
 
-            <div class="cover-wrapper">
+                <td>
+                  <span class="category-badge">
+                    {{ manga.category }}
+                  </span>
+                </td>
 
-              <img
-                :src="manga.cover"
-                :alt="manga.title"
-                class="manga-cover"
-              />
+                <td>
+                  Chapter {{ manga.latestChapter }}
+                </td>
 
-            </div>
+                <td>
+                  <span
+                    class="status-badge"
+                    :class="{
+                      ongoing: manga.status === 'กำลังดำเนินเรื่อง',
+                      completed: manga.status === 'จบแล้ว'
+                    }"
+                  >
+                    {{ manga.status }}
+                  </span>
+                </td>
 
-            <!-- Information -->
+                <td>
+                  <div class="action-buttons">
+                    <button
+                      class="manage-button"
+                      @click="manageManga(manga.id)"
+                    >
+                      จัดการ
+                    </button>
 
-            <div class="manga-info">
+                    <button
+                      class="delete-button"
+                      @click="deleteManga(manga.id)"
+                    >
+                      ลบ
+                    </button>
+                  </div>
+                </td>
+              </tr>
 
-              <div class="manga-top">
-
-                <div>
-                  <h3>
-                    {{ manga.title }}
-                  </h3>
-
-                  <p class="author">
-                    {{ manga.author }}
-                  </p>
-                </div>
-
-                <span
-                  class="status-badge"
-                  :class="{
-                    ongoing:
-                      manga.status === 'กำลังดำเนินเรื่อง',
-                    completed:
-                      manga.status === 'จบแล้ว',
-                  }"
+              <tr v-if="filteredManga.length === 0">
+                <td
+                  colspan="6"
+                  class="empty-state"
                 >
-                  {{ manga.status }}
-                </span>
-
-              </div>
-
-              <div class="manga-meta">
-
-                <span>
-                  หมวดหมู่: {{ manga.category }}
-                </span>
-
-                <span>
-                  ตอนล่าสุด:
-                  {{ manga.latestChapter || 0 }}
-                </span>
-
-              </div>
-
-              <p class="description">
-                {{ manga.description || 'ยังไม่มีรายละเอียด' }}
-              </p>
-
-              <!-- Actions -->
-
-              <div class="card-actions">
-
-                <button
-                  type="button"
-                  class="manage-button"
-                  @click="manageManga(manga.id)"
-                >
-                  จัดการตอน
-                </button>
-
-                <button
-                  type="button"
-                  class="delete-button"
-                  @click="deleteManga(manga.id)"
-                >
-                  ลบ
-                </button>
-
-              </div>
-
-            </div>
-
-          </article>
-
+                  ไม่พบมังงะที่ค้นหา
+                </td>
+              </tr>
+            </tbody>
+          </table>
         </div>
-
       </section>
-
     </main>
 
-    <!-- =========================
-         Add Manga Modal
-    ========================== -->
-
+    <!-- Add Manga Modal -->
     <div
       v-if="showAddModal"
       class="modal-overlay"
       @click.self="closeAddModal"
     >
-
       <div class="modal">
-
         <div class="modal-header">
-
           <div>
-
-            <p class="section-label">
-              NEW MANGA
-            </p>
-
-            <h2>
-              เพิ่มมังงะใหม่
-            </h2>
-
+            <h2>เพิ่มมังงะ</h2>
+            <p>กรอกข้อมูลมังงะที่ต้องการเพิ่ม</p>
           </div>
 
           <button
-            type="button"
             class="close-button"
             @click="closeAddModal"
           >
             ×
           </button>
-
         </div>
 
-        <!-- Form -->
-
-        <form
-          class="manga-form"
-          @submit.prevent="addManga"
-        >
-
-          <!-- Title -->
-
+        <div class="modal-body">
           <div class="form-group">
-
             <label>
               ชื่อมังงะ
               <span>*</span>
@@ -662,13 +443,9 @@ function backToWebsite() {
               type="text"
               placeholder="เช่น One Piece"
             />
-
           </div>
 
-          <!-- Author -->
-
           <div class="form-group">
-
             <label>
               ผู้แต่ง
               <span>*</span>
@@ -679,128 +456,85 @@ function backToWebsite() {
               type="text"
               placeholder="ชื่อผู้แต่ง"
             />
-
           </div>
 
-          <!-- Category -->
+          <div class="form-row">
+            <div class="form-group">
+              <label>
+                หมวดหมู่
+                <span>*</span>
+              </label>
 
-          <div class="form-group">
+              <input
+                v-model="form.category"
+                type="text"
+                placeholder="เช่น Action"
+              />
+            </div>
 
-            <label>
-              หมวดหมู่
-              <span>*</span>
-            </label>
+            <div class="form-group">
+              <label>สถานะ</label>
 
-            <input
-              v-model="form.category"
-              type="text"
-              placeholder="เช่น Action"
-            />
+              <select v-model="form.status">
+                <option value="กำลังดำเนินเรื่อง">
+                  กำลังดำเนินเรื่อง
+                </option>
 
+                <option value="จบแล้ว">
+                  จบแล้ว
+                </option>
+              </select>
+            </div>
           </div>
 
-          <!-- Status -->
-
           <div class="form-group">
-
-            <label>
-              สถานะ
-            </label>
-
-            <select v-model="form.status">
-
-              <option value="กำลังดำเนินเรื่อง">
-                กำลังดำเนินเรื่อง
-              </option>
-
-              <option value="จบแล้ว">
-                จบแล้ว
-              </option>
-
-            </select>
-
-          </div>
-
-          <!-- Cover -->
-
-          <div class="form-group">
-
-            <label>
-              URL รูปปก
-            </label>
+            <label>URL รูปปก</label>
 
             <input
               v-model="form.cover"
               type="text"
               placeholder="https://..."
             />
-
           </div>
 
-          <!-- Description -->
-
           <div class="form-group">
-
-            <label>
-              รายละเอียด
-            </label>
+            <label>รายละเอียด</label>
 
             <textarea
               v-model="form.description"
               rows="4"
               placeholder="รายละเอียดของมังงะ"
             ></textarea>
-
           </div>
+        </div>
 
-          <!-- Buttons -->
+        <div class="modal-footer">
+          <button
+            class="cancel-button"
+            @click="closeAddModal"
+          >
+            ยกเลิก
+          </button>
 
-          <div class="modal-actions">
-
-            <button
-              type="button"
-              class="cancel-button"
-              @click="closeAddModal"
-            >
-              ยกเลิก
-            </button>
-
-            <button
-              type="submit"
-              class="save-button"
-            >
-              บันทึกมังงะ
-            </button>
-
-          </div>
-
-        </form>
-
+          <button
+            class="save-button"
+            @click="addManga"
+          >
+            เพิ่มมังงะ
+          </button>
+        </div>
       </div>
-
     </div>
 
-    <!-- =========================
-         Toast
-    ========================== -->
-
-    <Transition name="toast">
-
+    <!-- Toast -->
+    <transition name="toast">
       <div
         v-if="showToast"
         class="toast"
       >
-
-        <span class="toast-check">
-          ✓
-        </span>
-
         {{ toastMessage }}
-
       </div>
-
-    </Transition>
-
+    </transition>
   </div>
 </template>
 
@@ -809,508 +543,500 @@ function backToWebsite() {
   box-sizing: border-box;
 }
 
-/* =========================
-   Theme
-========================= */
-
 .admin-page {
   min-height: 100vh;
   background: #f7f7f8;
   color: #18181b;
 }
 
-/* =========================
-   Header
-========================= */
-
+/* Header */
 .admin-header {
+  height: 70px;
+  padding: 0 40px;
   background: #18181b;
-  border-bottom: 1px solid #27272a;
-  position: sticky;
-  top: 0;
-  z-index: 50;
-}
+  color: #ffffff;
 
-.header-inner {
-  max-width: 1400px;
-  margin: 0 auto;
-  padding: 18px 32px;
   display: flex;
   align-items: center;
   justify-content: space-between;
 }
 
-.brand {
+.header-left {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 18px;
 }
 
-.brand-name {
-  color: #ffffff;
-  font-size: 24px;
+.logo {
+  font-size: 25px;
   font-weight: 800;
   letter-spacing: -0.5px;
 }
 
-.brand-name span {
-  color: #d4d4d8;
+.logo span {
+  color: #7c3aed;
 }
 
-.admin-badge {
+.admin-label {
   padding: 5px 10px;
+  border: 1px solid #3f3f46;
   border-radius: 6px;
-  background: #7c3aed;
-  color: #ffffff;
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.8px;
+
+  color: #d4d4d8;
+  font-size: 12px;
+}
+
+.header-right {
+  display: flex;
+  align-items: center;
 }
 
 .back-button {
-  border: 1px solid #71717a;
+  padding: 9px 15px;
+
   background: transparent;
+  border: 1px solid #52525b;
+  border-radius: 7px;
+
   color: #ffffff;
-  font-size: 14px;
-  font-weight: 600;
   cursor: pointer;
-  transition: background 0.2s ease,
-    border-color 0.2s ease;
-  padding: 9px 14px;
-  border-radius: 8px;
+  font-size: 14px;
+
+  transition: 0.2s;
 }
 
 .back-button:hover {
   background: #27272a;
-  border-color: #a1a1aa;
 }
 
-/* =========================
-   Main
-========================= */
-
+/* Main */
 .admin-main {
-  max-width: 1400px;
+  width: min(1400px, calc(100% - 80px));
   margin: 0 auto;
-  padding: 42px 32px 80px;
+  padding: 40px 0 60px;
 }
 
-.page-header {
-  display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: 20px;
-  margin-bottom: 32px;
-}
-
-.section-label {
-  margin: 0 0 8px;
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 2px;
-  color: #7c3aed;
-}
-
-.page-header h1 {
-  margin: 0;
-  font-size: 36px;
-  line-height: 1.1;
-  letter-spacing: -1px;
-}
-
-.page-description {
-  margin: 10px 0 0;
-  color: #777777;
-  font-size: 15px;
-}
-
-/* =========================
-   Add Button
-========================= */
-
-.add-button {
-  border: none;
-  border-radius: 10px;
-  padding: 12px 18px;
-  background: #7c3aed;
-  color: #ffffff;
-  font-size: 14px;
-  font-weight: 700;
-  cursor: pointer;
+.page-title {
   display: flex;
   align-items: center;
-  gap: 7px;
-  transition: transform 0.2s ease,
-    background 0.2s ease;
+  justify-content: space-between;
+
+  margin-bottom: 30px;
+}
+
+.page-title h1 {
+  margin: 0 0 6px;
+
+  font-size: 30px;
+  font-weight: 800;
+}
+
+.page-title p {
+  margin: 0;
+
+  color: #777777;
+  font-size: 14px;
+}
+
+.add-button {
+  padding: 11px 18px;
+
+  background: #7c3aed;
+  border: none;
+  border-radius: 7px;
+
+  color: #ffffff;
+  cursor: pointer;
+
+  font-size: 14px;
+  font-weight: 600;
+
+  transition: 0.2s;
 }
 
 .add-button:hover {
   background: #6d28d9;
-  transform: translateY(-1px);
 }
 
-.add-button span {
-  font-size: 19px;
-}
-
-/* =========================
-   Stats
-========================= */
-
-.stats-grid {
+/* Statistics */
+.statistics {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: 16px;
-  margin-bottom: 28px;
+  gap: 18px;
+
+  margin-bottom: 30px;
 }
 
 .stat-card {
+  min-height: 110px;
+  padding: 22px;
+
   background: #ffffff;
   border: 1px solid #e5e5e5;
-  border-radius: 12px;
-  padding: 20px;
+  border-radius: 10px;
+
   display: flex;
   align-items: center;
-  gap: 15px;
+  gap: 16px;
 }
 
 .stat-icon {
-  width: 44px;
-  height: 44px;
-  border-radius: 10px;
-  background: #eeeeee;
-  color: #7c3aed;
+  width: 48px;
+  height: 48px;
+
+  border-radius: 9px;
+
   display: flex;
   align-items: center;
   justify-content: center;
+
+  font-size: 18px;
   font-weight: 800;
-  font-size: 15px;
 }
 
-.stat-card p {
+.stat-icon.purple {
+  background: #ede9fe;
+  color: #7c3aed;
+}
+
+.stat-icon.blue {
+  background: #e0f2fe;
+  color: #0284c7;
+}
+
+.stat-icon.green {
+  background: #dcfce7;
+  color: #16a34a;
+}
+
+.stat-icon.gray {
+  background: #f4f4f5;
+  color: #52525b;
+}
+
+.stat-content {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.stat-content span {
+  color: #777777;
+  font-size: 13px;
+}
+
+.stat-content strong {
+  font-size: 24px;
+  font-weight: 800;
+}
+
+/* Manga Section */
+.manga-section {
+  background: #ffffff;
+  border: 1px solid #e5e5e5;
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.section-header {
+  padding: 22px 24px;
+
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  border-bottom: 1px solid #eeeeee;
+}
+
+.section-header h2 {
   margin: 0 0 4px;
+
+  font-size: 19px;
+  font-weight: 700;
+}
+
+.section-header p {
+  margin: 0;
+
+  color: #777777;
+  font-size: 13px;
+}
+
+.search-box input {
+  width: 320px;
+  padding: 10px 13px;
+
+  border: 1px solid #d4d4d8;
+  border-radius: 7px;
+
+  background: #ffffff;
+  color: #18181b;
+
+  outline: none;
+  font-size: 14px;
+}
+
+.search-box input:focus {
+  border-color: #7c3aed;
+}
+
+/* Table */
+.table-wrapper {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.manga-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.manga-table th {
+  padding: 14px 20px;
+
+  background: #fafafa;
+  border-bottom: 1px solid #eeeeee;
+
+  color: #52525b;
+  text-align: left;
+
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.manga-table td {
+  padding: 16px 20px;
+
+  border-bottom: 1px solid #eeeeee;
+
+  font-size: 14px;
+  vertical-align: middle;
+}
+
+.manga-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.manga-table tbody tr:hover {
+  background: #fafafa;
+}
+
+.manga-info {
+  min-width: 270px;
+
+  display: flex;
+  align-items: center;
+  gap: 13px;
+}
+
+.manga-cover {
+  width: 48px;
+  height: 64px;
+
+  border-radius: 5px;
+
+  object-fit: cover;
+  background: #eeeeee;
+}
+
+.manga-info > div {
+  min-width: 0;
+
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.manga-info strong {
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.manga-info span {
+  max-width: 250px;
+
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+
   color: #777777;
   font-size: 12px;
 }
 
-.stat-card strong {
-  font-size: 25px;
-  color: #18181b;
-}
+.category-badge {
+  display: inline-block;
 
-/* =========================
-   Toolbar
-========================= */
+  padding: 5px 9px;
 
-.toolbar {
-  margin-bottom: 24px;
-}
+  background: #f4f4f5;
+  border-radius: 5px;
 
-.search-box {
-  width: 100%;
-  max-width: 550px;
-  background: #ffffff;
-  border: 1px solid #e5e5e5;
-  border-radius: 10px;
-  padding: 0 14px;
-  display: flex;
-  align-items: center;
-  transition: border-color 0.2s ease,
-    box-shadow 0.2s ease;
-}
-
-.search-box:focus-within {
-  border-color: #7c3aed;
-  box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.1);
-}
-
-.search-icon {
-  font-size: 14px;
-  margin-right: 8px;
-}
-
-.search-box input {
-  width: 100%;
-  border: none;
-  outline: none;
-  padding: 13px 0;
-  background: transparent;
-  color: #18181b;
-  font-size: 14px;
-}
-
-.search-box input::placeholder {
-  color: #a1a1aa;
-}
-
-/* =========================
-   Manga Section
-========================= */
-
-.manga-section {
-  background: #ffffff;
-  border: 1px solid #e5e5e5;
-  border-radius: 14px;
-  padding: 26px;
-}
-
-.section-heading {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 22px;
-}
-
-.section-heading h2 {
-  margin: 0 0 5px;
-  font-size: 20px;
-}
-
-.section-heading p {
-  margin: 0;
-  color: #777777;
-  font-size: 13px;
-}
-
-.result-count {
-  color: #777777;
-  font-size: 13px;
-}
-
-/* =========================
-   Manga List
-========================= */
-
-.manga-list {
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-}
-
-.manga-card {
-  border: 1px solid #e5e5e5;
-  border-radius: 12px;
-  padding: 16px;
-  display: flex;
-  gap: 20px;
-  transition: border-color 0.2s ease,
-    box-shadow 0.2s ease;
-}
-
-.manga-card:hover {
-  border-color: #c4b5fd;
-  box-shadow: 0 5px 20px rgba(24, 24, 27, 0.06);
-}
-
-.cover-wrapper {
-  width: 110px;
-  min-width: 110px;
-  height: 145px;
-  overflow: hidden;
-  border-radius: 8px;
-  background: #eeeeee;
-}
-
-.manga-cover {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-.manga-info {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-}
-
-.manga-top {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 20px;
-}
-
-.manga-top h3 {
-  margin: 0 0 5px;
-  font-size: 20px;
-  color: #18181b;
-}
-
-.author {
-  margin: 0;
-  color: #777777;
-  font-size: 13px;
+  color: #52525b;
+  font-size: 12px;
 }
 
 .status-badge {
+  display: inline-block;
+
+  padding: 5px 9px;
+
+  border-radius: 5px;
+
+  font-size: 12px;
   white-space: nowrap;
-  padding: 6px 10px;
-  border-radius: 6px;
-  font-size: 11px;
-  font-weight: 700;
 }
 
 .status-badge.ongoing {
   background: #ede9fe;
-  color: #6d28d9;
+  color: #7c3aed;
 }
 
 .status-badge.completed {
-  background: #eeeeee;
-  color: #555555;
+  background: #f4f4f5;
+  color: #52525b;
 }
 
-.manga-meta {
+.action-buttons {
   display: flex;
-  gap: 22px;
-  margin-top: 15px;
-  color: #666666;
-  font-size: 12px;
-}
-
-.description {
-  margin: 12px 0 18px;
-  color: #777777;
-  font-size: 13px;
-  line-height: 1.6;
-  max-width: 800px;
-}
-
-.card-actions {
-  display: flex;
-  gap: 8px;
-  margin-top: auto;
+  align-items: center;
+  gap: 7px;
 }
 
 .manage-button,
 .delete-button {
-  border: none;
-  border-radius: 7px;
-  padding: 9px 14px;
-  font-size: 12px;
-  font-weight: 700;
+  padding: 7px 11px;
+
+  border-radius: 6px;
+
   cursor: pointer;
+  font-size: 12px;
+
+  transition: 0.2s;
 }
 
 .manage-button {
-  background: #7c3aed;
+  background: #18181b;
+  border: 1px solid #18181b;
   color: #ffffff;
 }
 
 .manage-button:hover {
-  background: #6d28d9;
+  background: #3f3f46;
+  border-color: #3f3f46;
 }
 
 .delete-button {
-  background: #eeeeee;
-  color: #555555;
+  background: #ffffff;
+  border: 1px solid #d4d4d8;
+  color: #52525b;
 }
 
 .delete-button:hover {
-  background: #e5e5e5;
+  background: #f4f4f5;
+  border-color: #a1a1aa;
 }
-
-/* =========================
-   Empty
-========================= */
 
 .empty-state {
-  text-align: center;
-  padding: 70px 20px;
+  padding: 50px 20px !important;
+
   color: #777777;
+  text-align: center !important;
 }
 
-.empty-icon {
-  font-size: 35px;
-  margin-bottom: 12px;
-}
-
-.empty-state h3 {
-  margin: 0 0 5px;
-  color: #18181b;
-}
-
-.empty-state p {
-  margin: 0;
-  font-size: 13px;
-}
-
-/* =========================
-   Modal
-========================= */
-
+/* Modal */
 .modal-overlay {
   position: fixed;
   inset: 0;
-  z-index: 100;
+
+  z-index: 1000;
+
   background: rgba(24, 24, 27, 0.65);
+
   display: flex;
   align-items: center;
   justify-content: center;
+
   padding: 20px;
 }
 
 .modal {
-  width: 100%;
-  max-width: 600px;
+  width: min(550px, 100%);
   max-height: 90vh;
-  overflow-y: auto;
+
   background: #ffffff;
-  border-radius: 16px;
-  padding: 28px;
-  box-shadow: 0 20px 60px rgba(24, 24, 27, 0.25);
+  border-radius: 12px;
+
+  overflow-y: auto;
+
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.2);
 }
 
 .modal-header {
+  padding: 22px 24px;
+
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  margin-bottom: 25px;
+
+  border-bottom: 1px solid #eeeeee;
 }
 
 .modal-header h2 {
+  margin: 0 0 5px;
+
+  font-size: 20px;
+}
+
+.modal-header p {
   margin: 0;
-  font-size: 24px;
-  color: #18181b;
+
+  color: #777777;
+  font-size: 13px;
 }
 
 .close-button {
-  width: 34px;
-  height: 34px;
+  width: 32px;
+  height: 32px;
+
   border: none;
-  border-radius: 8px;
-  background: #eeeeee;
-  color: #18181b;
-  font-size: 22px;
+  border-radius: 6px;
+
+  background: transparent;
+
+  color: #777777;
+
   cursor: pointer;
-  transition: background 0.2s ease;
+  font-size: 24px;
+  line-height: 1;
 }
 
 .close-button:hover {
-  background: #e5e5e5;
+  background: #f4f4f5;
+  color: #18181b;
 }
 
-/* =========================
-   Form
-========================= */
-
-.manga-form {
-  display: flex;
-  flex-direction: column;
-  gap: 17px;
+.modal-body {
+  padding: 24px;
 }
 
 .form-group {
-  display: flex;
-  flex-direction: column;
-  gap: 7px;
+  margin-bottom: 18px;
+}
+
+.form-group:last-child {
+  margin-bottom: 0;
 }
 
 .form-group label {
+  display: block;
+
+  margin-bottom: 7px;
+
+  color: #27272a;
+
   font-size: 13px;
-  font-weight: 700;
-  color: #18181b;
+  font-weight: 600;
 }
 
 .form-group label span {
@@ -1321,67 +1047,72 @@ function backToWebsite() {
 .form-group select,
 .form-group textarea {
   width: 100%;
-  border: 1px solid #e5e5e5;
-  border-radius: 8px;
-  padding: 11px 12px;
+
+  padding: 10px 12px;
+
   background: #ffffff;
+  border: 1px solid #d4d4d8;
+  border-radius: 7px;
+
   color: #18181b;
+
+  outline: none;
+
   font-family: inherit;
   font-size: 14px;
-  outline: none;
-  transition: border-color 0.2s ease,
-    box-shadow 0.2s ease;
+}
+
+.form-group textarea {
+  resize: vertical;
 }
 
 .form-group input:focus,
 .form-group select:focus,
 .form-group textarea:focus {
   border-color: #7c3aed;
-  box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.1);
 }
 
-.form-group textarea {
-  resize: vertical;
-  min-height: 100px;
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
 }
 
-.form-group input::placeholder,
-.form-group textarea::placeholder {
-  color: #a1a1aa;
-}
+.modal-footer {
+  padding: 18px 24px;
 
-/* =========================
-   Modal Actions
-========================= */
-
-.modal-actions {
   display: flex;
   justify-content: flex-end;
-  gap: 9px;
-  margin-top: 8px;
+  gap: 10px;
+
+  border-top: 1px solid #eeeeee;
 }
 
 .cancel-button,
 .save-button {
-  border: none;
-  border-radius: 8px;
-  padding: 11px 17px;
-  font-size: 13px;
-  font-weight: 700;
+  padding: 10px 17px;
+
+  border-radius: 7px;
+
   cursor: pointer;
+
+  font-size: 14px;
+  font-weight: 600;
 }
 
 .cancel-button {
-  background: #eeeeee;
-  color: #555555;
+  background: #ffffff;
+  border: 1px solid #d4d4d8;
+  color: #52525b;
 }
 
 .cancel-button:hover {
-  background: #e5e5e5;
+  background: #f4f4f5;
 }
 
 .save-button {
   background: #7c3aed;
+  border: 1px solid #7c3aed;
   color: #ffffff;
 }
 
@@ -1389,43 +1120,29 @@ function backToWebsite() {
   background: #6d28d9;
 }
 
-/* =========================
-   Toast
-========================= */
-
+/* Toast */
 .toast {
   position: fixed;
   right: 25px;
   bottom: 25px;
-  z-index: 200;
-  background: #18181b;
-  color: #ffffff;
-  padding: 13px 18px;
-  border-radius: 9px;
-  display: flex;
-  align-items: center;
-  gap: 9px;
-  font-size: 13px;
-  box-shadow: 0 8px 30px rgba(24, 24, 27, 0.2);
-}
 
-.toast-check {
-  width: 20px;
-  height: 20px;
-  border-radius: 50%;
-  background: #7c3aed;
+  z-index: 2000;
+
+  padding: 13px 18px;
+
+  background: #18181b;
+  border-radius: 8px;
+
   color: #ffffff;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 11px;
-  font-weight: 800;
+
+  font-size: 14px;
+
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
 }
 
 .toast-enter-active,
 .toast-leave-active {
-  transition: opacity 0.2s ease,
-    transform 0.2s ease;
+  transition: 0.25s;
 }
 
 .toast-enter-from,
@@ -1434,91 +1151,66 @@ function backToWebsite() {
   transform: translateY(10px);
 }
 
-/* =========================
-   Responsive
-========================= */
-
+/* Responsive */
 @media (max-width: 1000px) {
-  .stats-grid {
+  .statistics {
     grid-template-columns: repeat(2, 1fr);
+  }
+
+  .admin-main {
+    width: min(100% - 40px, 1400px);
+  }
+
+  .admin-header {
+    padding: 0 20px;
   }
 }
 
 @media (max-width: 700px) {
-  .header-inner {
-    padding: 15px 18px;
+  .admin-header {
+    height: auto;
+    min-height: 70px;
+    padding: 15px 20px;
+
+    gap: 15px;
   }
 
-  .admin-main {
-    padding: 30px 18px 60px;
-  }
-
-  .page-header {
-    align-items: flex-start;
-    flex-direction: column;
-  }
-
-  .page-header h1 {
-    font-size: 30px;
-  }
-
-  .stats-grid {
-    grid-template-columns: 1fr 1fr;
-  }
-
-  .manga-section {
-    padding: 18px;
-  }
-
-  .manga-card {
-    flex-direction: column;
-  }
-
-  .cover-wrapper {
-    width: 100%;
-    height: 220px;
-  }
-
-  .manga-top {
-    flex-direction: column;
-    gap: 10px;
-  }
-
-  .manga-meta {
-    flex-direction: column;
-    gap: 5px;
-  }
-
-  .card-actions {
-    margin-top: 5px;
-  }
-}
-
-@media (max-width: 500px) {
-  .brand-name {
-    font-size: 20px;
-  }
-
-  .admin-badge {
+  .admin-label {
     display: none;
   }
 
-  .stats-grid {
+  .page-title {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 15px;
+  }
+
+  .statistics {
     grid-template-columns: 1fr;
   }
 
-  .stat-card {
-    padding: 16px;
+  .section-header {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 15px;
   }
 
-  .modal {
-    padding: 20px;
+  .search-box {
+    width: 100%;
   }
 
-  .toast {
-    right: 15px;
-    bottom: 15px;
-    left: 15px;
+  .search-box input {
+    width: 100%;
+  }
+
+  .form-row {
+    grid-template-columns: 1fr;
+    gap: 0;
+  }
+
+  .admin-main {
+    width: calc(100% - 30px);
+    padding-top: 25px;
   }
 }
 </style>

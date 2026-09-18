@@ -8,8 +8,8 @@ import RegisterView from '@/views/RegisterView.vue'
 import BookshelfView from '@/views/BookshelfView.vue'
 import AdminView from '@/views/AdminView.vue'
 import AdminMangaView from '@/views/AdminMangaView.vue'
-
 import { useAuthStore } from '@/stores/auth'
+import CategoryView from '@/views/CategoryView.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -70,6 +70,11 @@ const router = createRouter({
       meta: {
         requiresAdmin: true,
       },
+    },
+    {
+      path: '/category',
+      name: 'category',
+      component: CategoryView,
     },
   ],
 })

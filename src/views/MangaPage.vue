@@ -2,172 +2,146 @@
 import { computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useBookshelfStore } from '@/stores/bookshelf'
+import { MangaService } from '@/services/MangaService'
+
+interface AdminChapter {
+  id: number
+  number: number
+  title: string
+  imageCount: number
+}
 
 const route = useRoute()
 const router = useRouter()
+
 const bookshelfStore = useBookshelfStore()
+const mangaService = new MangaService()
 
-interface Manga {
-  id: number
-  title: string
-  author: string
-  category: string
-  chapter: number
-  status: string
-  description: string
-  cover: string
-}
+/* ========================================
+   Current Manga
+======================================== */
 
-/*
-|--------------------------------------------------------------------------
-| Manga List
-|--------------------------------------------------------------------------
-| ID ต้องตรงกับหน้า Home
-|
-| 1 = One Piece
-| 2 = Solo Leveling
-| 3 = Naruto
-| 4 = Demon Slayer
-|--------------------------------------------------------------------------
-*/
-
-const mangaList: Manga[] = [
-  {
-    id: 1,
-    title: 'One Piece',
-    author: 'Eiichiro Oda',
-    category: 'Action',
-    chapter: 100,
-    status: 'กำลังดำเนินการ',
-    description:
-      'เรื่องราวการผจญภัยของลูฟี่และกลุ่มโจรสลัดหมวกฟางที่ออกเดินทางตามหาสมบัติ One Piece',
-    cover:
-      'https://images.unsplash.com/photo-1613376023733-0a73315d9b06?w=600',
-  },
-  {
-    id: 2,
-    title: 'Solo Leveling',
-    author: 'Chugong',
-    category: 'Fantasy',
-    chapter: 100,
-    status: 'จบแล้ว',
-    description:
-      'เรื่องราวของซองจินอู นักล่าที่เริ่มต้นจากผู้ที่อ่อนแอที่สุด และได้รับพลังที่ทำให้สามารถพัฒนาตัวเองได้อย่างไร้ขีดจำกัด',
-    cover:
-      'https://images.unsplash.com/photo-1578632767115-351597cf2477?w=600',
-  },
-  {
-    id: 3,
-    title: 'Naruto',
-    author: 'Masashi Kishimoto',
-    category: 'Action',
-    chapter: 100,
-    status: 'จบแล้ว',
-    description:
-      'เรื่องราวของนารูโตะ นินจาหนุ่มผู้มีความฝันที่จะเป็นโฮคาเงะ และต้องผ่านการฝึกฝนและการต่อสู้มากมาย',
-    cover:
-      'https://images.unsplash.com/photo-1560419015-7c427e8ae5ba?w=600',
-  },
-  {
-    id: 4,
-    title: 'Demon Slayer',
-    author: 'Koyoharu Gotouge',
-    category: 'Action',
-    chapter: 100,
-    status: 'จบแล้ว',
-    description:
-      'เรื่องราวของทันจิโร่ที่ออกเดินทางเพื่อช่วยเหลือน้องสาวและต่อสู้กับเหล่าอสูร',
-    cover:
-      'https://images.unsplash.com/photo-1607604276583-eef5d076aa5f?w=600',
-  },
-]
-
-/*
-|--------------------------------------------------------------------------
-| Current Manga
-|--------------------------------------------------------------------------
-*/
-
-const mangaId = computed(() => Number(route.params.id))
-
-const manga = computed(() => {
-  return mangaList.find((item) => item.id === mangaId.value)
+const mangaId = computed(() => {
+  return Number(route.params.id)
 })
 
-/*
-|--------------------------------------------------------------------------
-| Chapters
-|--------------------------------------------------------------------------
-*/
-
-const chapters = computed(() => {
-  if (!manga.value) {
-    return []
-  }
-
-  return Array.from(
-    { length: manga.value.chapter },
-    (_, index) => index + 1
+const manga = computed(() => {
+  return mangaService.getMangaById(
+    mangaId.value
   )
 })
 
-/*
-|--------------------------------------------------------------------------
-| Bookshelf
-|--------------------------------------------------------------------------
-*/
+/* ========================================
+   Chapters
+======================================== */
 
-const isInBookshelf = computed(() => {
-  return bookshelfStore.isInBookshelf(mangaId.value)
+const chapterStorageKey = computed(() => {
+  return `mangaverse_chapters_${mangaId.value}`
 })
 
-/*
-|--------------------------------------------------------------------------
-| Navigation
-|--------------------------------------------------------------------------
-*/
+const chapters = computed<AdminChapter[]>(() => {
+  const saved = localStorage.getItem(
+    chapterStorageKey.value
+  )
+
+  if (!saved) {
+    return []
+  }
+
+  try {
+    const parsed = JSON.parse(saved)
+
+    if (!Array.isArray(parsed)) {
+      return []
+    }
+
+    return parsed
+      .map((chapter) => ({
+        id: Number(chapter.id),
+        number: Number(chapter.number),
+        title: String(
+          chapter.title ?? ''
+        ),
+        imageCount: Number(
+          chapter.imageCount ?? 0
+        ),
+      }))
+      .filter(
+        (chapter) =>
+          Number.isFinite(chapter.id) &&
+          Number.isFinite(chapter.number)
+      )
+      .sort(
+        (a, b) =>
+          b.number - a.number
+      )
+  } catch {
+    return []
+  }
+})
+
+/* ========================================
+   Bookshelf
+======================================== */
+
+const isInBookshelf = computed(() => {
+  return bookshelfStore.isInBookshelf(
+    mangaId.value
+  )
+})
+
+/* ========================================
+   Navigation
+======================================== */
 
 function goHome() {
   router.push('/')
 }
 
-/*
-|--------------------------------------------------------------------------
-| Read Chapter
-|--------------------------------------------------------------------------
-*/
+/* ========================================
+   Read Chapter
+======================================== */
 
-function readChapter(chapter: number) {
+function readChapter(
+  chapter: number
+) {
   if (!manga.value) {
     return
   }
 
-  bookshelfStore.updateChapter(manga.value.id, chapter)
+  bookshelfStore.updateChapter(
+    manga.value.id,
+    chapter
+  )
 
   router.push(
     `/manga/${manga.value.id}/chapter/${chapter}`
   )
 }
 
-/*
-|--------------------------------------------------------------------------
-| Read Latest Chapter
-|--------------------------------------------------------------------------
-*/
+/* ========================================
+   Read Latest Chapter
+======================================== */
 
 function readLatest() {
   if (!manga.value) {
     return
   }
 
-  readChapter(manga.value.chapter)
+  const latestChapter = chapters.value[0]
+
+  if (!latestChapter) {
+    return
+  }
+
+  readChapter(
+    latestChapter.number
+  )
 }
 
-/*
-|--------------------------------------------------------------------------
-| Add / Remove Bookshelf
-|--------------------------------------------------------------------------
-*/
+/* ========================================
+   Add / Remove Bookshelf
+======================================== */
 
 function toggleBookshelf() {
   if (!manga.value) {
@@ -175,7 +149,10 @@ function toggleBookshelf() {
   }
 
   if (isInBookshelf.value) {
-    bookshelfStore.removeFromBookshelf(manga.value.id)
+    bookshelfStore.removeFromBookshelf(
+      manga.value.id
+    )
+
     return
   }
 
@@ -189,9 +166,14 @@ function toggleBookshelf() {
 </script>
 
 <template>
-  <div v-if="manga" class="manga-page">
+  <div
+    v-if="manga"
+    class="manga-page"
+  >
+
     <!-- Main -->
     <main class="main-content">
+
       <!-- Back -->
       <button
         type="button"
@@ -203,19 +185,25 @@ function toggleBookshelf() {
 
       <!-- Manga Detail -->
       <section class="manga-detail">
+
         <!-- Cover -->
         <div class="cover-section">
+
           <div class="cover-wrapper">
+
             <img
               :src="manga.cover"
               :alt="manga.title"
               class="manga-cover"
             />
+
           </div>
+
         </div>
 
         <!-- Information -->
         <div class="manga-info">
+
           <p class="section-label">
             MANGA DETAIL
           </p>
@@ -225,33 +213,55 @@ function toggleBookshelf() {
           </h1>
 
           <div class="meta-list">
+
             <div class="meta-item">
-              <span>ผู้เขียน</span>
+
+              <span>
+                ผู้เขียน
+              </span>
+
               <strong>
                 {{ manga.author }}
               </strong>
+
             </div>
 
             <div class="meta-item">
-              <span>หมวดหมู่</span>
+
+              <span>
+                หมวดหมู่
+              </span>
+
               <strong>
                 {{ manga.category }}
               </strong>
+
             </div>
 
             <div class="meta-item">
-              <span>สถานะ</span>
+
+              <span>
+                สถานะ
+              </span>
+
               <strong>
                 {{ manga.status }}
               </strong>
+
             </div>
 
             <div class="meta-item">
-              <span>จำนวนตอน</span>
+
+              <span>
+                จำนวนตอน
+              </span>
+
               <strong>
-                {{ manga.chapter }} ตอน
+                {{ chapters.length }} ตอน
               </strong>
+
             </div>
+
           </div>
 
           <p class="description">
@@ -260,36 +270,56 @@ function toggleBookshelf() {
 
           <!-- Actions -->
           <div class="main-actions">
+
             <button
               type="button"
               class="read-button"
+              :disabled="
+                chapters.length === 0
+              "
               @click="readLatest"
             >
-              อ่านตอนล่าสุด
+              {{
+                chapters.length > 0
+                  ? 'อ่านตอนล่าสุด'
+                  : 'ยังไม่มีตอน'
+              }}
             </button>
 
             <button
               type="button"
               class="bookshelf-button"
-              :class="{ added: isInBookshelf }"
+              :class="{
+                added: isInBookshelf
+              }"
               @click="toggleBookshelf"
             >
-              <template v-if="isInBookshelf">
+
+              <template
+                v-if="isInBookshelf"
+              >
                 ✓ อยู่ในชั้นหนังสือ
               </template>
 
               <template v-else>
                 ＋ เพิ่มเข้าชั้นหนังสือ
               </template>
+
             </button>
+
           </div>
+
         </div>
+
       </section>
 
       <!-- Chapters -->
       <section class="chapter-section">
+
         <div class="section-heading">
+
           <div>
+
             <p class="section-label">
               CHAPTERS
             </p>
@@ -297,30 +327,72 @@ function toggleBookshelf() {
             <h2>
               รายชื่อตอน
             </h2>
+
           </div>
 
           <span class="chapter-count">
-            {{ manga.chapter }} ตอน
+            {{ chapters.length }} ตอน
           </span>
+
         </div>
 
-        <div class="chapter-grid">
+        <!-- Chapter List -->
+        <div
+          v-if="chapters.length > 0"
+          class="chapter-grid"
+        >
+
           <button
             v-for="chapter in chapters"
-            :key="chapter"
+            :key="chapter.id"
             type="button"
             class="chapter-button"
-            @click="readChapter(chapter)"
+            @click="
+              readChapter(
+                chapter.number
+              )
+            "
           >
-            ตอนที่ {{ chapter }}
+
+            <span>
+              ตอนที่ {{ chapter.number }}
+            </span>
+
+            <small
+              v-if="chapter.title"
+            >
+              {{ chapter.title }}
+            </small>
+
           </button>
+
         </div>
+
+        <!-- Empty -->
+        <div
+          v-else
+          class="empty-chapter"
+        >
+
+          <h3>
+            ยังไม่มีตอน
+          </h3>
+
+          <p>
+            มังงะเรื่องนี้ยังไม่มีตอนให้อ่าน
+          </p>
+
+        </div>
+
       </section>
+
     </main>
 
     <!-- Footer -->
     <footer class="footer">
+
       <div class="footer-inner">
+
         <div class="footer-logo">
           Manga<span>Verse</span>
         </div>
@@ -328,8 +400,11 @@ function toggleBookshelf() {
         <p>
           MangaVerse — Online Manga Reading System
         </p>
+
       </div>
+
     </footer>
+
   </div>
 
   <!-- Not Found -->
@@ -337,12 +412,14 @@ function toggleBookshelf() {
     v-else
     class="not-found"
   >
+
     <h1>
       ไม่พบมังงะ
     </h1>
 
     <p>
-      ไม่พบมังงะที่มี ID {{ mangaId }}
+      ไม่พบมังงะที่มี ID
+      {{ mangaId }}
     </p>
 
     <button
@@ -351,6 +428,7 @@ function toggleBookshelf() {
     >
       กลับหน้าแรก
     </button>
+
   </div>
 </template>
 
@@ -365,7 +443,6 @@ function toggleBookshelf() {
   color: #18181b;
 }
 
-
 /* ========================================
    Main
 ======================================== */
@@ -377,7 +454,6 @@ function toggleBookshelf() {
   padding: 35px 0 70px;
 }
 
-
 /* ========================================
    Back Button
 ======================================== */
@@ -386,21 +462,15 @@ function toggleBookshelf() {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-
   margin-bottom: 25px;
   padding: 9px 15px;
-
   border: 1px solid #e5e5e5;
   border-radius: 8px;
-
   background: #ffffff;
   color: #18181b;
-
   font-size: 14px;
   font-weight: 600;
-
   cursor: pointer;
-
   transition:
     background 0.2s ease,
     color 0.2s ease,
@@ -413,7 +483,6 @@ function toggleBookshelf() {
   color: #ffffff;
 }
 
-
 /* ========================================
    Manga Detail
 ======================================== */
@@ -422,14 +491,11 @@ function toggleBookshelf() {
   display: grid;
   grid-template-columns: 300px 1fr;
   gap: 45px;
-
   padding: 30px;
-
   background: #ffffff;
   border: 1px solid #e5e5e5;
   border-radius: 14px;
 }
-
 
 /* ========================================
    Cover
@@ -442,9 +508,7 @@ function toggleBookshelf() {
 .cover-wrapper {
   width: 100%;
   aspect-ratio: 3 / 4;
-
   overflow: hidden;
-
   background: #eeeeee;
   border-radius: 10px;
 }
@@ -452,12 +516,9 @@ function toggleBookshelf() {
 .manga-cover {
   width: 100%;
   height: 100%;
-
   display: block;
-
   object-fit: cover;
 }
-
 
 /* ========================================
    Manga Information
@@ -471,25 +532,19 @@ function toggleBookshelf() {
 
 .section-label {
   margin: 0 0 7px;
-
   color: #7c3aed;
-
   font-size: 12px;
   font-weight: 700;
-
   letter-spacing: 1.5px;
 }
 
 .manga-info h1 {
   margin: 0 0 25px;
-
   color: #18181b;
-
   font-size: 40px;
   font-weight: 800;
   line-height: 1.2;
 }
-
 
 /* ========================================
    Meta
@@ -497,10 +552,9 @@ function toggleBookshelf() {
 
 .meta-list {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-
+  grid-template-columns:
+    repeat(2, minmax(0, 1fr));
   gap: 12px;
-
   margin-bottom: 22px;
 }
 
@@ -508,9 +562,7 @@ function toggleBookshelf() {
   display: flex;
   flex-direction: column;
   gap: 5px;
-
   padding: 14px;
-
   background: #f7f7f8;
   border-radius: 8px;
 }
@@ -525,22 +577,17 @@ function toggleBookshelf() {
   font-size: 14px;
 }
 
-
 /* ========================================
    Description
 ======================================== */
 
 .description {
   max-width: 700px;
-
   margin: 0 0 25px;
-
   color: #555555;
-
   font-size: 15px;
   line-height: 1.8;
 }
-
 
 /* ========================================
    Main Actions
@@ -555,16 +602,11 @@ function toggleBookshelf() {
 .read-button,
 .bookshelf-button {
   min-height: 44px;
-
   padding: 0 20px;
-
   border-radius: 8px;
-
   font-size: 14px;
   font-weight: 600;
-
   cursor: pointer;
-
   transition:
     background 0.2s ease,
     color 0.2s ease,
@@ -572,12 +614,12 @@ function toggleBookshelf() {
     transform 0.2s ease;
 }
 
-
-/* Read */
+/* ========================================
+   Read Button
+======================================== */
 
 .read-button {
   border: 1px solid #7c3aed;
-
   background: #7c3aed;
   color: #ffffff;
 }
@@ -585,16 +627,23 @@ function toggleBookshelf() {
 .read-button:hover {
   background: #6d28d9;
   border-color: #6d28d9;
-
   transform: translateY(-1px);
 }
 
+.read-button:disabled {
+  background: #d4d4d8;
+  border-color: #d4d4d8;
+  color: #777777;
+  cursor: not-allowed;
+  transform: none;
+}
 
-/* Bookshelf */
+/* ========================================
+   Bookshelf
+======================================== */
 
 .bookshelf-button {
   border: 1px solid #d4d4d8;
-
   background: #ffffff;
   color: #18181b;
 }
@@ -606,11 +655,9 @@ function toggleBookshelf() {
 
 .bookshelf-button.added {
   border-color: #7c3aed;
-
   background: #f5f3ff;
   color: #7c3aed;
 }
-
 
 /* ========================================
    Chapter Section
@@ -618,14 +665,11 @@ function toggleBookshelf() {
 
 .chapter-section {
   margin-top: 45px;
-
   padding: 30px;
-
   background: #ffffff;
   border: 1px solid #e5e5e5;
   border-radius: 14px;
 }
-
 
 /* ========================================
    Section Heading
@@ -635,25 +679,20 @@ function toggleBookshelf() {
   display: flex;
   align-items: flex-end;
   justify-content: space-between;
-
   margin-bottom: 25px;
 }
 
 .section-heading h2 {
   margin: 0;
-
   color: #18181b;
-
   font-size: 28px;
   font-weight: 800;
 }
 
 .chapter-count {
   color: #777777;
-
   font-size: 13px;
 }
-
 
 /* ========================================
    Chapter Grid
@@ -661,29 +700,26 @@ function toggleBookshelf() {
 
 .chapter-grid {
   display: grid;
-
   grid-template-columns:
     repeat(5, minmax(0, 1fr));
-
   gap: 10px;
 }
 
 .chapter-button {
-  min-height: 42px;
-
-  padding: 0 10px;
-
+  min-height: 60px;
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
   border: 1px solid #e5e5e5;
   border-radius: 7px;
-
   background: #ffffff;
   color: #18181b;
-
   font-size: 13px;
   font-weight: 600;
-
   cursor: pointer;
-
   transition:
     background 0.2s ease,
     color 0.2s ease,
@@ -691,15 +727,50 @@ function toggleBookshelf() {
     transform 0.2s ease;
 }
 
+.chapter-button small {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: #777777;
+  font-size: 11px;
+  font-weight: 400;
+}
+
 .chapter-button:hover {
   border-color: #7c3aed;
-
   background: #7c3aed;
   color: #ffffff;
-
   transform: translateY(-1px);
 }
 
+.chapter-button:hover small {
+  color: #ffffff;
+}
+
+/* ========================================
+   Empty Chapter
+======================================== */
+
+.empty-chapter {
+  padding: 45px 20px;
+  text-align: center;
+  border: 1px dashed #d4d4d8;
+  border-radius: 10px;
+  background: #fafafa;
+}
+
+.empty-chapter h3 {
+  margin: 0 0 8px;
+  color: #18181b;
+  font-size: 18px;
+}
+
+.empty-chapter p {
+  margin: 0;
+  color: #777777;
+  font-size: 14px;
+}
 
 /* ========================================
    Footer
@@ -707,9 +778,7 @@ function toggleBookshelf() {
 
 .footer {
   margin-top: 20px;
-
   padding: 35px 0;
-
   background: #18181b;
   color: #aaaaaa;
 }
@@ -717,9 +786,7 @@ function toggleBookshelf() {
 .footer-inner {
   width: 86%;
   max-width: 1300px;
-
   margin: 0 auto;
-
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -727,7 +794,6 @@ function toggleBookshelf() {
 
 .footer-logo {
   color: #ffffff;
-
   font-size: 25px;
   font-weight: 800;
 }
@@ -738,10 +804,8 @@ function toggleBookshelf() {
 
 .footer p {
   margin: 0;
-
   font-size: 13px;
 }
-
 
 /* ========================================
    Not Found
@@ -749,54 +813,41 @@ function toggleBookshelf() {
 
 .not-found {
   min-height: 100vh;
-
   display: flex;
   flex-direction: column;
-
   align-items: center;
   justify-content: center;
-
   gap: 12px;
-
   background: #f7f7f8;
   color: #18181b;
 }
 
 .not-found h1 {
   margin: 0;
-
   font-size: 32px;
 }
 
 .not-found p {
   margin: 0;
-
   color: #777777;
-
   font-size: 14px;
 }
 
 .not-found button {
   margin-top: 10px;
-
   padding: 10px 18px;
-
   border: none;
   border-radius: 8px;
-
   background: #7c3aed;
   color: #ffffff;
-
   font-size: 14px;
   font-weight: 600;
-
   cursor: pointer;
 }
 
 .not-found button:hover {
   background: #6d28d9;
 }
-
 
 /* ========================================
    Responsive
@@ -818,7 +869,6 @@ function toggleBookshelf() {
   }
 }
 
-
 /* ========================================
    Tablet
 ======================================== */
@@ -826,9 +876,7 @@ function toggleBookshelf() {
 @media (max-width: 750px) {
   .manga-detail {
     grid-template-columns: 1fr;
-
     gap: 30px;
-
     padding: 25px;
   }
 
@@ -847,7 +895,6 @@ function toggleBookshelf() {
   }
 }
 
-
 /* ========================================
    Mobile
 ======================================== */
@@ -855,7 +902,6 @@ function toggleBookshelf() {
 @media (max-width: 600px) {
   .main-content {
     width: 92%;
-
     padding-top: 25px;
   }
 
@@ -907,7 +953,6 @@ function toggleBookshelf() {
     width: 92%;
   }
 }
-
 
 /* ========================================
    Small Mobile
