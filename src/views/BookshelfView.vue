@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 
 import { useAuthStore } from '@/stores/auth'
@@ -8,12 +9,48 @@ import { useCustomCategoryStore } from '@/stores/customCategory'
 const router = useRouter()
 
 const authStore = useAuthStore()
+const bookshelfStore = useBookshelfStore()
+const customCategoryStore = useCustomCategoryStore()
 
-const bookshelfStore =
-  useBookshelfStore()
+/* =========================
+   Create Folder Modal
+========================= */
 
-const customCategoryStore =
-  useCustomCategoryStore()
+const showCreateFolderModal = ref(false)
+const folderNameInput = ref('')
+
+function openCreateFolderModal() {
+  folderNameInput.value = ''
+  showCreateFolderModal.value = true
+}
+
+function closeCreateFolderModal() {
+  showCreateFolderModal.value = false
+  folderNameInput.value = ''
+}
+
+function createFolder() {
+  const folderName = folderNameInput.value.trim()
+
+  if (!folderName) {
+    return
+  }
+
+  const created =
+    customCategoryStore.addCategory(
+      folderName,
+    )
+
+  if (!created) {
+    return
+  }
+
+  closeCreateFolderModal()
+}
+
+/* =========================
+   Navigation
+========================= */
 
 function goHome() {
   router.push('/')
@@ -32,6 +69,10 @@ function continueReading(
   )
 }
 
+/* =========================
+   Bookshelf
+========================= */
+
 function removeFromBookshelf(
   id: number,
 ) {
@@ -44,76 +85,28 @@ function logout() {
 }
 
 /* =========================
-   Create Folder
+   Folder
 ========================= */
 
-function createFolder() {
-  const name = window.prompt(
-    'กรุณาตั้งชื่อโฟลเดอร์',
-  )
-
-  if (name === null) {
-    return
-  }
-
-  const folderName = name.trim()
-
-  if (!folderName) {
-    window.alert(
-      'กรุณากรอกชื่อโฟลเดอร์',
-    )
-    return
-  }
-
-  const created =
-    customCategoryStore.addCategory(
-      folderName,
-    )
-
-  if (!created) {
-    window.alert(
-      'มีโฟลเดอร์ชื่อนี้อยู่แล้ว',
-    )
-    return
-  }
-
-  window.alert(
-    'สร้างโฟลเดอร์เรียบร้อยแล้ว',
-  )
-}
-
-/* =========================
-   Open Folder
-========================= */
-
-function openFolder(
-  id: number,
-) {
+function openFolder(id: number) {
   router.push(
     `/bookshelf/category/${id}`,
   )
 }
 
-/* =========================
-   Edit Folder
-========================= */
-
-function editFolder(
-  id: number,
-) {
+function editFolder(id: number) {
   const folder =
-    customCategoryStore.getCategoryById(
-      id,
-    )
+    customCategoryStore.getCategoryById(id)
 
   if (!folder) {
     return
   }
 
-  const newName = window.prompt(
-    'แก้ไขชื่อโฟลเดอร์',
-    folder.name,
-  )
+  const newName =
+    window.prompt(
+      'แก้ไขชื่อโฟลเดอร์',
+      folder.name,
+    )
 
   if (newName === null) {
     return
@@ -132,43 +125,19 @@ function editFolder(
   }
 }
 
-/* =========================
-   Delete Folder
-========================= */
-
-function deleteFolder(
-  id: number,
-) {
-  const folder =
-    customCategoryStore.getCategoryById(
-      id,
-    )
-
-  if (!folder) {
-    return
-  }
-
-  const confirmed =
-    window.confirm(
-      `ต้องการลบโฟลเดอร์ "${folder.name}" หรือไม่?`,
-    )
-
-  if (!confirmed) {
-    return
-  }
-
-  customCategoryStore.deleteCategory(
-    id,
-  )
+/*
+  ลบโฟลเดอร์ทันที
+  ไม่มี confirm / popup
+*/
+function deleteFolder(id: number) {
+  customCategoryStore.deleteCategory(id)
 }
 </script>
 
 <template>
   <div class="bookshelf-page">
-
     <!-- Main -->
     <main class="main-content">
-
       <!-- Page Title -->
       <div class="page-title">
         <p class="section-label">
@@ -207,7 +176,6 @@ function deleteFolder(
 
       <!-- Folder Section -->
       <section class="folder-section">
-
         <div class="section-header">
           <div>
             <h2>
@@ -222,7 +190,7 @@ function deleteFolder(
           <button
             type="button"
             class="create-folder-button"
-            @click="createFolder"
+            @click="openCreateFolderModal"
           >
             + สร้างโฟลเดอร์
           </button>
@@ -243,7 +211,6 @@ function deleteFolder(
             :key="folder.id"
             class="folder-card"
           >
-
             <button
               type="button"
               class="folder-main"
@@ -268,11 +235,12 @@ function deleteFolder(
             </button>
 
             <div class="folder-actions">
-
               <button
                 type="button"
                 class="folder-edit"
-                @click="editFolder(folder.id)"
+                @click="
+                  editFolder(folder.id)
+                "
               >
                 แก้ไข
               </button>
@@ -280,11 +248,12 @@ function deleteFolder(
               <button
                 type="button"
                 class="folder-delete"
-                @click="deleteFolder(folder.id)"
+                @click="
+                  deleteFolder(folder.id)
+                "
               >
                 ลบ
               </button>
-
             </div>
           </article>
         </div>
@@ -306,12 +275,11 @@ function deleteFolder(
           <button
             type="button"
             class="create-folder-button"
-            @click="createFolder"
+            @click="openCreateFolderModal"
           >
             + สร้างโฟลเดอร์แรก
           </button>
         </div>
-
       </section>
 
       <!-- Empty Bookshelf -->
@@ -347,7 +315,6 @@ function deleteFolder(
         v-else
         class="manga-section"
       >
-
         <div class="section-header">
           <div>
             <h2>
@@ -361,7 +328,6 @@ function deleteFolder(
         </div>
 
         <div class="manga-grid">
-
           <article
             v-for="
               manga in bookshelfStore.mangaList
@@ -369,7 +335,6 @@ function deleteFolder(
             :key="manga.id"
             class="manga-card"
           >
-
             <!-- Cover -->
             <button
               type="button"
@@ -377,19 +342,16 @@ function deleteFolder(
               @click="openManga(manga.id)"
             >
               <div class="cover-wrapper">
-
                 <img
                   :src="manga.cover"
                   :alt="manga.title"
                   class="manga-cover"
                 />
-
               </div>
             </button>
 
             <!-- Info -->
             <div class="manga-info">
-
               <h2>
                 {{ manga.title }}
               </h2>
@@ -401,7 +363,6 @@ function deleteFolder(
 
               <!-- Buttons -->
               <div class="card-actions">
-
                 <button
                   type="button"
                   class="continue-button"
@@ -436,21 +397,16 @@ function deleteFolder(
                 >
                   เอาออก
                 </button>
-
               </div>
             </div>
-
           </article>
-
         </div>
       </section>
-
     </main>
 
     <!-- Footer -->
     <footer class="footer">
       <div class="footer-inner">
-
         <div class="footer-logo">
           Manga<span>Verse</span>
         </div>
@@ -458,10 +414,58 @@ function deleteFolder(
         <p>
           MangaVerse — Online Manga Reading System
         </p>
-
       </div>
     </footer>
 
+    <!-- =========================
+         Create Folder Modal
+    ========================== -->
+    <div
+      v-if="showCreateFolderModal"
+      class="modal-overlay"
+      @click.self="closeCreateFolderModal"
+    >
+      <div class="folder-modal">
+        <div class="modal-icon">
+          F
+        </div>
+
+        <h2>
+          สร้างโฟลเดอร์
+        </h2>
+
+        <p class="modal-description">
+          ตั้งชื่อโฟลเดอร์สำหรับจัดเก็บมังงะ
+        </p>
+
+        <input
+          v-model="folderNameInput"
+          type="text"
+          class="folder-input"
+          placeholder="เช่น มังงะที่ชอบ"
+          maxlength="50"
+          @keyup.enter="createFolder"
+        />
+
+        <div class="modal-actions">
+          <button
+            type="button"
+            class="modal-cancel"
+            @click="closeCreateFolderModal"
+          >
+            ยกเลิก
+          </button>
+
+          <button
+            type="button"
+            class="modal-confirm"
+            @click="createFolder"
+          >
+            สร้างโฟลเดอร์
+          </button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -568,7 +572,6 @@ function deleteFolder(
   color: #555555;
   font-size: 13px;
   cursor: pointer;
-
   transition:
     background 0.2s ease,
     border-color 0.2s ease,
@@ -624,7 +627,6 @@ function deleteFolder(
   font-size: 13px;
   font-weight: 700;
   cursor: pointer;
-
   transition:
     background 0.2s ease,
     transform 0.2s ease;
@@ -657,7 +659,6 @@ function deleteFolder(
   background: #ffffff;
   border: 1px solid #e5e5e5;
   border-radius: 10px;
-
   transition:
     transform 0.2s ease,
     box-shadow 0.2s ease;
@@ -685,14 +686,11 @@ function deleteFolder(
   width: 48px;
   height: 48px;
   flex-shrink: 0;
-
   display: grid;
   place-items: center;
-
   border-radius: 10px;
   background: #f1ecff;
   color: #7c3aed;
-
   font-size: 20px;
   font-weight: 800;
 }
@@ -704,11 +702,9 @@ function deleteFolder(
 .folder-info h3 {
   margin: 0 0 5px;
   overflow: hidden;
-
   color: #18181b;
   font-size: 16px;
   font-weight: 700;
-
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -768,7 +764,6 @@ function deleteFolder(
 .no-folder {
   padding: 35px 20px;
   text-align: center;
-
   background: #ffffff;
   border: 1px dashed #d4d4d8;
   border-radius: 10px;
@@ -804,11 +799,9 @@ function deleteFolder(
   overflow: hidden;
   display: flex;
   flex-direction: column;
-
   background: #ffffff;
   border: 1px solid #e5e5e5;
   border-radius: 10px;
-
   transition:
     transform 0.2s ease,
     box-shadow 0.2s ease;
@@ -844,7 +837,6 @@ function deleteFolder(
   height: 100%;
   display: block;
   object-fit: cover;
-
   transition:
     transform 0.3s ease;
 }
@@ -895,7 +887,6 @@ function deleteFolder(
   font-size: 12px;
   font-weight: 600;
   cursor: pointer;
-
   transition:
     background 0.2s ease,
     border-color 0.2s ease,
@@ -952,13 +943,10 @@ function deleteFolder(
 
 .empty-bookshelf {
   padding: 70px 25px;
-
   display: flex;
   flex-direction: column;
   align-items: center;
-
   text-align: center;
-
   background: #ffffff;
   border: 1px solid #e5e5e5;
   border-radius: 12px;
@@ -968,14 +956,11 @@ function deleteFolder(
   width: 60px;
   height: 60px;
   margin-bottom: 18px;
-
   display: grid;
   place-items: center;
-
   border-radius: 50%;
   background: #f1ecff;
   color: #7c3aed;
-
   font-size: 30px;
   font-weight: 400;
 }
@@ -994,20 +979,136 @@ function deleteFolder(
 .home-button {
   min-height: 42px;
   padding: 0 20px;
-
   border: none;
   border-radius: 8px;
-
   background: #7c3aed;
   color: #ffffff;
-
   font-size: 13px;
   font-weight: 700;
-
   cursor: pointer;
 }
 
 .home-button:hover {
+  background: #6d28d9;
+}
+
+/* ========================================
+   Create Folder Modal
+======================================== */
+
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: rgba(24, 24, 27, 0.45);
+  backdrop-filter: blur(3px);
+}
+
+.folder-modal {
+  width: 100%;
+  max-width: 430px;
+  padding: 30px;
+  background: #ffffff;
+  border: 1px solid #e5e5e5;
+  border-radius: 16px;
+  box-shadow:
+    0 20px 50px rgba(0, 0, 0, 0.15);
+  text-align: center;
+}
+
+.modal-icon {
+  width: 58px;
+  height: 58px;
+  margin: 0 auto 16px;
+  display: grid;
+  place-items: center;
+  border-radius: 14px;
+  background: #f1ecff;
+  color: #7c3aed;
+  font-size: 24px;
+  font-weight: 800;
+}
+
+.folder-modal h2 {
+  margin: 0 0 8px;
+  color: #18181b;
+  font-size: 23px;
+  font-weight: 800;
+}
+
+.modal-description {
+  margin: 0 0 22px;
+  color: #777777;
+  font-size: 13px;
+}
+
+.folder-input {
+  width: 100%;
+  height: 46px;
+  padding: 0 14px;
+  border: 1px solid #d4d4d8;
+  border-radius: 8px;
+  outline: none;
+  background: #ffffff;
+  color: #18181b;
+  font-family: inherit;
+  font-size: 14px;
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.folder-input::placeholder {
+  color: #a1a1aa;
+}
+
+.folder-input:focus {
+  border-color: #7c3aed;
+  box-shadow:
+    0 0 0 3px rgba(124, 58, 237, 0.12);
+}
+
+.modal-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 22px;
+}
+
+.modal-actions button {
+  flex: 1;
+  height: 42px;
+  border-radius: 8px;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition:
+    background 0.2s ease,
+    border-color 0.2s ease;
+}
+
+.modal-cancel {
+  border: 1px solid #d4d4d8;
+  background: #ffffff;
+  color: #555555;
+}
+
+.modal-cancel:hover {
+  background: #f5f5f5;
+}
+
+.modal-confirm {
+  border: 1px solid #7c3aed;
+  background: #7c3aed;
+  color: #ffffff;
+}
+
+.modal-confirm:hover {
+  border-color: #6d28d9;
   background: #6d28d9;
 }
 
@@ -1018,7 +1119,6 @@ function deleteFolder(
 .footer {
   margin-top: 20px;
   padding: 35px 0;
-
   background: #18181b;
   color: #aaaaaa;
 }
@@ -1027,7 +1127,6 @@ function deleteFolder(
   width: 86%;
   max-width: 1300px;
   margin: 0 auto;
-
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -1129,6 +1228,10 @@ function deleteFolder(
   .logout-button {
     width: 100%;
   }
+
+  .folder-modal {
+    padding: 25px 20px;
+  }
 }
 
 @media (max-width: 420px) {
@@ -1165,6 +1268,10 @@ function deleteFolder(
 
   .footer-inner {
     width: 94%;
+  }
+
+  .modal-actions {
+    flex-direction: column;
   }
 }
 </style>

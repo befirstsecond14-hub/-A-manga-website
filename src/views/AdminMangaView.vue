@@ -5,17 +5,24 @@ import {
   reactive,
   ref,
 } from 'vue'
-
 import {
   useRoute,
   useRouter,
 } from 'vue-router'
-
 import { MangaService } from '../services/MangaService'
 
 type MangaStatus =
   | 'กำลังดำเนินเรื่อง'
   | 'จบแล้ว'
+
+interface ChapterFile {
+  id: string
+  name: string
+  type: string
+  size: number
+  dataUrl: string
+  isImage: boolean
+}
 
 interface AdminChapter {
   id: number
@@ -23,6 +30,7 @@ interface AdminChapter {
   title: string
   imageCount: number
   images: string[]
+  files: ChapterFile[]
 }
 
 const router = useRouter()
@@ -96,6 +104,100 @@ const chapterStorageKey =
   `mangaverse_chapters_${mangaId}`
 
 /* =========================
+   Create File ID
+========================= */
+
+function createFileId() {
+  return `${Date.now()}-${Math.random()
+    .toString(36)
+    .slice(2, 10)}`
+}
+
+/* =========================
+   Data URL MIME
+========================= */
+
+function getMimeFromDataUrl(
+  dataUrl: string
+) {
+  const match = dataUrl.match(
+    /^data:([^;,]+)[;,]/
+  )
+
+  return match?.[1] ??
+    'application/octet-stream'
+}
+
+/* =========================
+   Get File Extension
+========================= */
+
+function getFileExtension(
+  fileName: string
+) {
+  const parts = fileName.split('.')
+
+  if (parts.length <= 1) {
+    return 'FILE'
+  }
+
+  return (
+    parts[parts.length - 1] ?? 'FILE'
+  ).toUpperCase()
+}
+
+/* =========================
+   Format File Size
+========================= */
+
+function formatFileSize(
+  size: number
+) {
+  if (size < 1024) {
+    return `${size} B`
+  }
+
+  if (size < 1024 * 1024) {
+    return `${(
+      size / 1024
+    ).toFixed(1)} KB`
+  }
+
+  if (size < 1024 * 1024 * 1024) {
+    return `${(
+      size /
+      (1024 * 1024)
+    ).toFixed(1)} MB`
+  }
+
+  return `${(
+    size /
+    (1024 * 1024 * 1024)
+  ).toFixed(1)} GB`
+}
+
+/* =========================
+   Convert Old Image
+========================= */
+
+function convertOldImageToFile(
+  image: string,
+  index: number
+): ChapterFile {
+  const type =
+    getMimeFromDataUrl(image)
+
+  return {
+    id: `old-image-${index}-${Date.now()}`,
+    name: `image-${index + 1}`,
+    type,
+    size: 0,
+    dataUrl: image,
+    isImage: true,
+  }
+}
+
+/* =========================
    Load Chapters
 ========================= */
 
@@ -117,7 +219,7 @@ function loadChapters(): AdminChapter[] {
 
     return parsed
       .map((chapter) => {
-        const images =
+        const oldImages =
           Array.isArray(chapter.images)
             ? chapter.images
                 .map((image: unknown) =>
@@ -129,6 +231,94 @@ function loadChapters(): AdminChapter[] {
                 )
             : []
 
+        let files: ChapterFile[] = []
+
+        if (
+          Array.isArray(chapter.files)
+        ) {
+          files = chapter.files
+            .map((file: any) => {
+              const dataUrl =
+                String(
+                  file.dataUrl ?? ''
+                )
+
+              if (!dataUrl) {
+                return null
+              }
+
+              const type =
+                String(
+                  file.type ??
+                    getMimeFromDataUrl(
+                      dataUrl
+                    )
+                )
+
+              return {
+                id: String(
+                  file.id ??
+                    createFileId()
+                ),
+                name: String(
+                  file.name ??
+                    'file'
+                ),
+                type,
+                size: Number(
+                  file.size ?? 0
+                ),
+                dataUrl,
+                isImage:
+                  Boolean(
+                    file.isImage
+                  ) ||
+                  type.startsWith(
+                    'image/'
+                  ),
+              }
+            })
+            .filter(
+              (
+                file: ChapterFile | null
+              ): file is ChapterFile =>
+                file !== null
+            )
+        }
+
+        /*
+         * รองรับข้อมูลเก่า
+         * ที่มีเฉพาะ images
+         */
+        if (
+          files.length === 0 &&
+          oldImages.length > 0
+        ) {
+          files = oldImages.map(
+            (
+              image: string,
+              index: number
+            ) =>
+              convertOldImageToFile(
+                image,
+                index
+              )
+          )
+        }
+
+        const images =
+          files.length > 0
+            ? files
+                .filter(
+                  (file) =>
+                    file.isImage
+                )
+                .map(
+                  (file) =>
+                    file.dataUrl
+                )
+            : oldImages
+
         const imageCount =
           images.length > 0
             ? images.length
@@ -138,18 +328,25 @@ function loadChapters(): AdminChapter[] {
 
         return {
           id: Number(chapter.id),
-          number: Number(chapter.number),
+          number: Number(
+            chapter.number
+          ),
           title: String(
             chapter.title ?? ''
           ),
           imageCount,
           images,
+          files,
         }
       })
       .filter(
         (chapter) =>
-          Number.isFinite(chapter.id) &&
-          Number.isFinite(chapter.number)
+          Number.isFinite(
+            chapter.id
+          ) &&
+          Number.isFinite(
+            chapter.number
+          )
       )
   } catch {
     return []
@@ -160,9 +357,10 @@ function loadChapters(): AdminChapter[] {
    Chapters
 ========================= */
 
-const chapters = ref<AdminChapter[]>(
-  loadChapters()
-)
+const chapters =
+  ref<AdminChapter[]>(
+    loadChapters()
+  )
 
 /* =========================
    Save Chapters
@@ -172,7 +370,9 @@ function saveChapters() {
   try {
     localStorage.setItem(
       chapterStorageKey,
-      JSON.stringify(chapters.value)
+      JSON.stringify(
+        chapters.value
+      )
     )
 
     return true
@@ -190,11 +390,13 @@ function saveChapters() {
    Sorted Chapters
 ========================= */
 
-const sortedChapters = computed(() => {
-  return [...chapters.value].sort(
-    (a, b) => b.number - a.number
-  )
-})
+const sortedChapters =
+  computed(() => {
+    return [...chapters.value].sort(
+      (a, b) =>
+        b.number - a.number
+    )
+  })
 
 /* =========================
    Chapter Form
@@ -214,19 +416,23 @@ const chapterForm = reactive<{
    Modal
 ========================= */
 
-const showChapterModal = ref(false)
+const showChapterModal =
+  ref(false)
 
 const editingChapterId =
   ref<number | null>(null)
 
-const isSavingChapter = ref(false)
+const isSavingChapter =
+  ref(false)
 
 /* =========================
    File Upload
 ========================= */
 
 const fileInput =
-  ref<HTMLInputElement | null>(null)
+  ref<HTMLInputElement | null>(
+    null
+  )
 
 const selectedFiles =
   ref<File[]>([])
@@ -235,11 +441,11 @@ const previewUrls =
   ref<string[]>([])
 
 /* =========================
-   Existing Images
+   Existing Files
 ========================= */
 
-const existingImages =
-  ref<string[]>([])
+const existingFiles =
+  ref<ChapterFile[]>([])
 
 /* =========================
    Back
@@ -292,7 +498,9 @@ function saveManga() {
     mangaForm.description.trim()
 
   const updated =
-    mangaService.updateManga(manga)
+    mangaService.updateManga(
+      manga
+    )
 
   if (!updated) {
     toast(
@@ -320,7 +528,9 @@ function fileToDataURL(
 
       reader.onload = () => {
         resolve(
-          String(reader.result)
+          String(
+            reader.result
+          )
         )
       }
 
@@ -354,7 +564,11 @@ async function handleCoverUpload(
     return
   }
 
-  if (!file.type.startsWith('image/')) {
+  if (
+    !file.type.startsWith(
+      'image/'
+    )
+  ) {
     toast(
       'กรุณาเลือกไฟล์รูปภาพเท่านั้น'
     )
@@ -387,7 +601,8 @@ async function handleCoverUpload(
 ========================= */
 
 function openAddChapterForm() {
-  editingChapterId.value = null
+  editingChapterId.value =
+    null
 
   const maxChapter =
     chapters.value.length > 0
@@ -401,19 +616,21 @@ function openAddChapterForm() {
 
   chapterForm.number =
     Number(
-      (maxChapter + 1).toFixed(1)
+      (maxChapter + 1).toFixed(
+        1
+      )
     )
 
   chapterForm.title = ''
   chapterForm.imageCount = 0
 
   selectedFiles.value = []
-
-  existingImages.value = []
+  existingFiles.value = []
 
   clearPreviewUrls()
 
-  showChapterModal.value = true
+  showChapterModal.value =
+    true
 }
 
 /* =========================
@@ -437,12 +654,64 @@ function openEditChapterForm(
 
   selectedFiles.value = []
 
-  existingImages.value =
-    [...chapter.images]
+  /*
+   * ถ้ามี files ให้ใช้ files
+   * ถ้าไม่มี ใช้ images แบบเก่า
+   */
+  existingFiles.value =
+    chapter.files.length > 0
+      ? [...chapter.files]
+      : chapter.images.map(
+          (
+            image,
+            index
+          ) =>
+            convertOldImageToFile(
+              image,
+              index
+            )
+        )
 
   clearPreviewUrls()
 
-  showChapterModal.value = true
+  showChapterModal.value =
+    true
+}
+
+/* =========================
+   Convert Selected Files
+========================= */
+
+async function convertSelectedFiles(
+  files: File[]
+): Promise<ChapterFile[]> {
+  const result: ChapterFile[] =
+    []
+
+  for (
+    const file of files
+  ) {
+    const dataUrl =
+      await fileToDataURL(file)
+
+    const isImage =
+      file.type.startsWith(
+        'image/'
+      )
+
+    result.push({
+      id: createFileId(),
+      name: file.name,
+      type:
+        file.type ||
+        'application/octet-stream',
+      size: file.size,
+      dataUrl,
+      isImage,
+    })
+  }
+
+  return result
 }
 
 /* =========================
@@ -492,7 +761,8 @@ async function saveChapter() {
         }
 
         return (
-          chapter.number === number
+          chapter.number ===
+          number
         )
       }
     )
@@ -502,57 +772,67 @@ async function saveChapter() {
     return
   }
 
-  isSavingChapter.value = true
+  isSavingChapter.value =
+    true
 
   try {
     /* =========================
-       Convert Images
+       Convert Files
     ========================= */
 
-    let images: string[] = []
+    let files: ChapterFile[] =
+      []
 
+    /*
+     * ถ้ามีการเลือกไฟล์ใหม่
+     * ใช้ไฟล์ใหม่แทนไฟล์เดิม
+     */
     if (
-      selectedFiles.value.length > 0
+      selectedFiles.value.length >
+      0
     ) {
-      images = []
+      files =
+        await convertSelectedFiles(
+          selectedFiles.value
+        )
+    }
 
-      for (
-        const file of
-        selectedFiles.value
-      ) {
-        if (
-          !file.type.startsWith(
-            'image/'
-          )
-        ) {
-          continue
-        }
-
-        const imageData =
-          await fileToDataURL(file)
-
-        images.push(imageData)
-      }
-    } else if (
-      editingChapterId.value !== null
+    /*
+     * ถ้าแก้ไขตอน
+     * และไม่ได้เลือกไฟล์ใหม่
+     * ใช้ไฟล์เดิมที่เหลืออยู่
+     */
+    else if (
+      editingChapterId.value !==
+      null
     ) {
-      /*
-       * ถ้าแก้ไข Chapter
-       * แต่ไม่ได้เลือกรูปใหม่
-       * ให้ใช้รูปเดิม
-       */
-
-      images = [
-        ...existingImages.value,
+      files = [
+        ...existingFiles.value,
       ]
     }
+
+    /*
+     * สร้าง images จากไฟล์รูป
+     * เพื่อให้ Reader เดิมยังใช้ได้
+     */
+    const images =
+      files
+        .filter(
+          (file) =>
+            file.isImage
+        )
+        .map(
+          (file) =>
+            file.dataUrl
+        )
 
     /* =========================
        Edit Existing Chapter
     ========================= */
 
     if (
-      editingChapterId.value !== null
+      editingChapterId.value !==
+      null
     ) {
       const chapter =
         chapters.value.find(
@@ -565,10 +845,17 @@ async function saveChapter() {
         return
       }
 
-      chapter.number = number
-      chapter.title = title
+      chapter.number =
+        number
 
-      chapter.images = images
+      chapter.title =
+        title
+
+      chapter.files =
+        files
+
+      chapter.images =
+        images
 
       chapter.imageCount =
         images.length
@@ -580,7 +867,8 @@ async function saveChapter() {
 
     else {
       const newId =
-        chapters.value.length > 0
+        chapters.value.length >
+        0
           ? Math.max(
               ...chapters.value.map(
                 (chapter) =>
@@ -593,11 +881,10 @@ async function saveChapter() {
         id: newId,
         number,
         title,
-
         imageCount:
           images.length,
-
         images,
+        files,
       })
     }
 
@@ -610,17 +897,30 @@ async function saveChapter() {
 
     if (!saved) {
       toast(
-        'พื้นที่จัดเก็บไม่เพียงพอ กรุณาใช้รูปขนาดเล็กลง'
+        'พื้นที่จัดเก็บไม่เพียงพอ กรุณาใช้ไฟล์ขนาดเล็กลง'
       )
+
       return
     }
 
+    /*
+     * สำคัญ:
+     * เก็บสถานะก่อนปิด Modal
+     */
+    const isEditing =
+      editingChapterId.value !==
+      null
+
     updateLatestChapter()
 
+    /*
+     * บันทึกสำเร็จแล้ว
+     * ปิด Modal ทันที
+     */
     closeChapterModal()
 
     toast(
-      editingChapterId.value !== null
+      isEditing
         ? 'แก้ไขตอนเรียบร้อยแล้ว'
         : 'เพิ่มตอนเรียบร้อยแล้ว'
     )
@@ -631,10 +931,11 @@ async function saveChapter() {
     )
 
     toast(
-      'ไม่สามารถบันทึกรูปภาพได้'
+      'ไม่สามารถบันทึกไฟล์ได้'
     )
   } finally {
-    isSavingChapter.value = false
+    isSavingChapter.value =
+      false
   }
 }
 
@@ -674,7 +975,10 @@ function deleteChapter(
     return
   }
 
-  chapters.value.splice(index, 1)
+  chapters.value.splice(
+    index,
+    1
+  )
 
   saveChapters()
 
@@ -721,7 +1025,7 @@ function triggerFileInput() {
 }
 
 /* =========================
-   Chapter Images
+   Chapter Files
 ========================= */
 
 function handleChapterImages(
@@ -735,43 +1039,116 @@ function handleChapterImages(
       ? Array.from(input.files)
       : []
 
-  const imageFiles =
-    files.filter((file) =>
-      file.type.startsWith(
-        'image/'
-      )
-    )
-
-  if (imageFiles.length === 0) {
-    selectedFiles.value = []
-
-    chapterForm.imageCount =
-      existingImages.value.length
-
-    toast(
-      'กรุณาเลือกไฟล์รูปภาพ'
-    )
-
+  if (files.length === 0) {
     input.value = ''
-
     return
   }
 
+  /*
+   * ถ้าเลือกชุดใหม่
+   * ให้แทนชุดที่เลือกก่อนหน้า
+   */
   selectedFiles.value =
-    imageFiles
+    files
 
   clearPreviewUrls()
 
+  /*
+   * สร้าง Preview เฉพาะรูป
+   * ไฟล์อื่นจะใช้ file card
+   */
   previewUrls.value =
-    imageFiles.map(
-      (file) =>
-        URL.createObjectURL(file)
-    )
+    files.map((file) => {
+      if (
+        file.type.startsWith(
+          'image/'
+        )
+      ) {
+        return URL.createObjectURL(
+          file
+        )
+      }
+
+      return ''
+    })
 
   chapterForm.imageCount =
-    imageFiles.length
+    files.filter(
+      (file) =>
+        file.type.startsWith(
+          'image/'
+        )
+    ).length
 
   input.value = ''
+}
+
+/* =========================
+   Remove Selected File
+========================= */
+
+function removeSelectedFile(
+  index: number
+) {
+  if (
+    index < 0 ||
+    index >=
+      selectedFiles.value.length
+  ) {
+    return
+  }
+
+  const url =
+    previewUrls.value[index]
+
+  if (url) {
+    URL.revokeObjectURL(url)
+  }
+
+  selectedFiles.value.splice(
+    index,
+    1
+  )
+
+  previewUrls.value.splice(
+    index,
+    1
+  )
+
+  chapterForm.imageCount =
+    selectedFiles.value.filter(
+      (file) =>
+        file.type.startsWith(
+          'image/'
+        )
+    ).length
+}
+
+/* =========================
+   Remove Existing File
+========================= */
+
+function removeExistingFile(
+  index: number
+) {
+  if (
+    index < 0 ||
+    index >=
+      existingFiles.value.length
+  ) {
+    return
+  }
+
+  existingFiles.value.splice(
+    index,
+    1
+  )
+
+  chapterForm.imageCount =
+    existingFiles.value.filter(
+      (file) =>
+        file.isImage
+    ).length
 }
 
 /* =========================
@@ -781,7 +1158,11 @@ function handleChapterImages(
 function clearPreviewUrls() {
   previewUrls.value.forEach(
     (url) => {
-      URL.revokeObjectURL(url)
+      if (url) {
+        URL.revokeObjectURL(
+          url
+        )
+      }
     }
   )
 
@@ -808,8 +1189,7 @@ function closeChapterModal() {
   chapterForm.imageCount = 0
 
   selectedFiles.value = []
-
-  existingImages.value = []
+  existingFiles.value = []
 
   clearPreviewUrls()
 
@@ -833,13 +1213,9 @@ onBeforeUnmount(() => {
 
 <template>
   <div class="admin-page">
-
     <!-- Header -->
-
     <header class="admin-header">
-
       <div class="header-left">
-
         <button
           class="back-btn"
           @click="goBack"
@@ -856,19 +1232,13 @@ onBeforeUnmount(() => {
             จัดการข้อมูลมังงะและตอนทั้งหมด
           </p>
         </div>
-
       </div>
-
     </header>
 
     <main class="admin-container">
-
       <!-- Manga Information -->
-
       <section class="manga-section">
-
         <div class="section-header">
-
           <div>
             <h2>
               ข้อมูลมังงะ
@@ -885,15 +1255,11 @@ onBeforeUnmount(() => {
           >
             บันทึกข้อมูล
           </button>
-
         </div>
 
         <div class="manga-content">
-
           <!-- Cover -->
-
           <div class="cover-section">
-
             <img
               :src="mangaForm.cover"
               :alt="mangaForm.title"
@@ -912,15 +1278,11 @@ onBeforeUnmount(() => {
                 hidden
               />
             </label>
-
           </div>
 
           <!-- Form -->
-
           <div class="manga-form">
-
             <div class="form-group">
-
               <label>
                 ชื่อเรื่อง
               </label>
@@ -930,11 +1292,9 @@ onBeforeUnmount(() => {
                 type="text"
                 placeholder="ชื่อมังงะ"
               />
-
             </div>
 
             <div class="form-group">
-
               <label>
                 ผู้แต่ง
               </label>
@@ -944,13 +1304,10 @@ onBeforeUnmount(() => {
                 type="text"
                 placeholder="ชื่อผู้แต่ง"
               />
-
             </div>
 
             <div class="form-row">
-
               <div class="form-group">
-
                 <label>
                   หมวดหมู่
                 </label>
@@ -960,11 +1317,9 @@ onBeforeUnmount(() => {
                   type="text"
                   placeholder="หมวดหมู่"
                 />
-
               </div>
 
               <div class="form-group">
-
                 <label>
                   สถานะ
                 </label>
@@ -972,7 +1327,6 @@ onBeforeUnmount(() => {
                 <select
                   v-model="mangaForm.status"
                 >
-
                   <option
                     value="กำลังดำเนินเรื่อง"
                   >
@@ -984,15 +1338,11 @@ onBeforeUnmount(() => {
                   >
                     จบแล้ว
                   </option>
-
                 </select>
-
               </div>
-
             </div>
 
             <div class="form-group">
-
               <label>
                 คำอธิบาย
               </label>
@@ -1002,23 +1352,15 @@ onBeforeUnmount(() => {
                 rows="5"
                 placeholder="คำอธิบายมังงะ"
               ></textarea>
-
             </div>
-
           </div>
-
         </div>
-
       </section>
 
       <!-- Chapter Section -->
-
       <section class="chapter-section">
-
         <div class="section-header">
-
           <div>
-
             <h2>
               จัดการตอน
             </h2>
@@ -1028,7 +1370,6 @@ onBeforeUnmount(() => {
               {{ chapters.length }}
               ตอน
             </p>
-
           </div>
 
           <button
@@ -1037,24 +1378,19 @@ onBeforeUnmount(() => {
           >
             + เพิ่มตอน
           </button>
-
         </div>
 
         <!-- Chapter List -->
-
         <div
           v-if="chapters.length > 0"
           class="chapter-list"
         >
-
           <div
             v-for="chapter in sortedChapters"
             :key="chapter.id"
             class="chapter-card"
           >
-
             <div class="chapter-info">
-
               <div
                 class="chapter-number"
               >
@@ -1072,12 +1408,13 @@ onBeforeUnmount(() => {
               >
                 {{ chapter.imageCount }}
                 รูป
+                /
+                {{ chapter.files.length }}
+                ไฟล์
               </div>
-
             </div>
 
             <div class="chapter-actions">
-
               <button
                 class="edit-btn"
                 @click="
@@ -1099,20 +1436,15 @@ onBeforeUnmount(() => {
               >
                 ลบ
               </button>
-
             </div>
-
           </div>
-
         </div>
 
         <!-- Empty -->
-
         <div
           v-else
           class="empty-state"
         >
-
           <h3>
             ยังไม่มีตอน
           </h3>
@@ -1128,29 +1460,20 @@ onBeforeUnmount(() => {
           >
             + เพิ่มตอนแรก
           </button>
-
         </div>
-
       </section>
-
     </main>
 
     <!-- Chapter Modal -->
-
     <div
       v-if="showChapterModal"
       class="modal-overlay"
       @click.self="closeChapterModal"
     >
-
       <div class="modal">
-
         <!-- Modal Header -->
-
         <div class="modal-header">
-
           <div>
-
             <h2>
               {{
                 editingChapterId !== null
@@ -1166,7 +1489,6 @@ onBeforeUnmount(() => {
                   : 'เพิ่มตอนใหม่ลงในมังงะ'
               }}
             </p>
-
           </div>
 
           <button
@@ -1176,17 +1498,12 @@ onBeforeUnmount(() => {
           >
             ×
           </button>
-
         </div>
 
         <!-- Modal Body -->
-
         <div class="modal-body">
-
           <!-- Chapter Number -->
-
           <div class="form-group">
-
             <label>
               เลขตอน
             </label>
@@ -1204,13 +1521,10 @@ onBeforeUnmount(() => {
             <small>
               สามารถเพิ่มตอนต่อไปได้ไม่จำกัด
             </small>
-
           </div>
 
           <!-- Chapter Title -->
-
           <div class="form-group">
-
             <label>
               ชื่อตอน
             </label>
@@ -1222,23 +1536,19 @@ onBeforeUnmount(() => {
               type="text"
               placeholder="เช่น การเริ่มต้น"
             />
-
           </div>
 
-          <!-- Images -->
-
+          <!-- Files -->
           <div class="form-group">
-
             <label>
-              รูปภาพในตอน
+              ไฟล์ในตอน
             </label>
 
             <div class="upload-area">
-
               <input
                 ref="fileInput"
                 type="file"
-                accept="image/*"
+                accept="*/*"
                 multiple
                 @change="
                   handleChapterImages
@@ -1253,120 +1563,204 @@ onBeforeUnmount(() => {
                   triggerFileInput
                 "
               >
-                เลือกรูปภาพ
+                เลือกไฟล์
               </button>
 
               <p>
                 {{
                   selectedFiles.length > 0
-                    ? `เลือกแล้ว ${selectedFiles.length} รูป`
+                    ? `เลือกแล้ว ${selectedFiles.length} ไฟล์`
                     : editingChapterId !== null &&
-                      existingImages.length > 0
-                      ? `ใช้รูปเดิม ${existingImages.length} รูป`
-                      : 'ยังไม่ได้เลือกรูปภาพ'
+                      existingFiles.length > 0
+                      ? `ใช้ไฟล์เดิม ${existingFiles.length} ไฟล์`
+                      : 'ยังไม่ได้เลือกไฟล์'
                 }}
               </p>
 
+              <small class="upload-hint">
+                รองรับรูปภาพ, PDF, PNG, JPG,
+                WebP, GIF, ZIP, CBZ, TXT
+                และไฟล์ประเภทอื่น ๆ
+              </small>
             </div>
-
           </div>
 
-          <!-- Existing Images -->
-
+          <!-- Existing Files -->
           <div
             v-if="
               editingChapterId !== null &&
-              existingImages.length > 0 &&
-              previewUrls.length === 0
+              existingFiles.length > 0 &&
+              selectedFiles.length === 0
             "
             class="preview-section"
           >
-
             <h3>
-              รูปภาพปัจจุบัน
+              ไฟล์ปัจจุบัน
             </h3>
 
             <div class="preview-grid">
-
               <div
                 v-for="(
-                  image,
+                  file,
                   index
-                ) in existingImages"
+                ) in existingFiles"
+                :key="file.id"
+                class="preview-item"
+              >
+                <!-- Image -->
+                <img
+                  v-if="file.isImage"
+                  :src="file.dataUrl"
+                  :alt="
+                    file.name
+                  "
+                />
+
+                <!-- Other File -->
+                <div
+                  v-else
+                  class="file-preview"
+                >
+                  <div
+                    class="file-extension"
+                  >
+                    {{
+                      getFileExtension(
+                        file.name
+                      )
+                    }}
+                  </div>
+
+                  <div
+                    class="file-name"
+                    :title="file.name"
+                  >
+                    {{ file.name }}
+                  </div>
+
+                  <div
+                    class="file-size"
+                  >
+                    {{
+                      formatFileSize(
+                        file.size
+                      )
+                    }}
+                  </div>
+                </div>
+
+                <span>
+                  {{ index + 1 }}
+                </span>
+
+                <button
+                  type="button"
+                  class="remove-image-btn"
+                  @click="
+                    removeExistingFile(
+                      index
+                    )
+                  "
+                >
+                  ×
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- New Files Preview -->
+          <div
+            v-if="
+              selectedFiles.length > 0
+            "
+            class="preview-section"
+          >
+            <h3>
+              ตัวอย่างไฟล์ใหม่
+            </h3>
+
+            <div class="preview-grid">
+              <div
+                v-for="(
+                  file,
+                  index
+                ) in selectedFiles"
                 :key="
-                  `existing-${index}`
+                  `${file.name}-${index}`
                 "
                 class="preview-item"
               >
-
+                <!-- Image Preview -->
                 <img
-                  :src="image"
+                  v-if="
+                    file.type.startsWith(
+                      'image/'
+                    ) &&
+                    previewUrls[index]
+                  "
+                  :src="
+                    previewUrls[index]
+                  "
                   :alt="
-                    `รูปปัจจุบันที่ ${
-                      index + 1
-                    }`
+                    file.name
                   "
                 />
+
+                <!-- Other File -->
+                <div
+                  v-else
+                  class="file-preview"
+                >
+                  <div
+                    class="file-extension"
+                  >
+                    {{
+                      getFileExtension(
+                        file.name
+                      )
+                    }}
+                  </div>
+
+                  <div
+                    class="file-name"
+                    :title="file.name"
+                  >
+                    {{ file.name }}
+                  </div>
+
+                  <div
+                    class="file-size"
+                  >
+                    {{
+                      formatFileSize(
+                        file.size
+                      )
+                    }}
+                  </div>
+                </div>
 
                 <span>
                   {{ index + 1 }}
                 </span>
 
-              </div>
-
-            </div>
-
-          </div>
-
-          <!-- New Image Preview -->
-
-          <div
-            v-if="
-              previewUrls.length > 0
-            "
-            class="preview-section"
-          >
-
-            <h3>
-              ตัวอย่างรูปภาพใหม่
-            </h3>
-
-            <div class="preview-grid">
-
-              <div
-                v-for="(
-                  url,
-                  index
-                ) in previewUrls"
-                :key="url"
-                class="preview-item"
-              >
-
-                <img
-                  :src="url"
-                  :alt="
-                    `รูปที่ ${
-                      index + 1
-                    }`
+                <button
+                  type="button"
+                  class="remove-image-btn"
+                  @click="
+                    removeSelectedFile(
+                      index
+                    )
                   "
-                />
-
-                <span>
-                  {{ index + 1 }}
-                </span>
-
+                >
+                  ×
+                </button>
               </div>
-
             </div>
-
           </div>
-
         </div>
 
         <!-- Modal Footer -->
-
         <div class="modal-footer">
-
           <button
             class="secondary-btn"
             :disabled="isSavingChapter"
@@ -1382,7 +1776,6 @@ onBeforeUnmount(() => {
             :disabled="isSavingChapter"
             @click="saveChapter"
           >
-
             {{
               isSavingChapter
                 ? 'กำลังบันทึก...'
@@ -1390,28 +1783,20 @@ onBeforeUnmount(() => {
                   ? 'บันทึกการแก้ไข'
                   : 'เพิ่มตอน'
             }}
-
           </button>
-
         </div>
-
       </div>
-
     </div>
 
     <!-- Toast -->
-
     <transition name="toast">
-
       <div
         v-if="showToast"
         class="toast"
       >
         {{ toastMessage }}
       </div>
-
     </transition>
-
   </div>
 </template>
 
@@ -1902,6 +2287,13 @@ onBeforeUnmount(() => {
   font-size: 13px;
 }
 
+.upload-hint {
+  display: block;
+  margin-top: 8px;
+  color: #999999;
+  font-size: 12px;
+}
+
 /* =========================
    Preview
 ========================= */
@@ -1942,6 +2334,84 @@ onBeforeUnmount(() => {
   border-radius: 5px;
   padding: 3px 7px;
   font-size: 11px;
+  z-index: 1;
+}
+
+/* =========================
+   File Preview
+========================= */
+
+.file-preview {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 12px;
+  text-align: center;
+}
+
+.file-extension {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 62px;
+  height: 62px;
+  border-radius: 10px;
+  background: #7c3aed;
+  color: #ffffff;
+  font-size: 14px;
+  font-weight: 700;
+  margin-bottom: 10px;
+}
+
+.file-name {
+  width: 100%;
+  color: #18181b;
+  font-size: 12px;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.file-size {
+  margin-top: 5px;
+  color: #888888;
+  font-size: 11px;
+}
+
+/* =========================
+   Remove File Button
+========================= */
+
+.remove-image-btn {
+  position: absolute;
+  right: 6px;
+  top: 6px;
+  width: 26px;
+  height: 26px;
+  border: none;
+  border-radius: 50%;
+  background: #dc2626;
+  color: #ffffff;
+  font-size: 18px;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2;
+  transition:
+    background 0.2s ease,
+    transform 0.2s ease;
+}
+
+.remove-image-btn:hover {
+  background: #b91c1c;
+  transform: scale(1.05);
 }
 
 /* =========================
@@ -1979,7 +2449,6 @@ onBeforeUnmount(() => {
 ========================= */
 
 @media (max-width: 768px) {
-
   .admin-header {
     padding: 16px;
   }
