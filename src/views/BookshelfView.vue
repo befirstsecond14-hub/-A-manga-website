@@ -1,11 +1,19 @@
 <script setup lang="ts">
 import { useRouter } from 'vue-router'
+
 import { useAuthStore } from '@/stores/auth'
 import { useBookshelfStore } from '@/stores/bookshelf'
+import { useCustomCategoryStore } from '@/stores/customCategory'
 
 const router = useRouter()
+
 const authStore = useAuthStore()
-const bookshelfStore = useBookshelfStore()
+
+const bookshelfStore =
+  useBookshelfStore()
+
+const customCategoryStore =
+  useCustomCategoryStore()
 
 function goHome() {
   router.push('/')
@@ -15,12 +23,18 @@ function openManga(id: number) {
   router.push(`/manga/${id}`)
 }
 
-function continueReading(id: number, chapter: number) {
-  router.push(`/manga/${id}/chapter/${chapter}`)
+function continueReading(
+  id: number,
+  chapter: number,
+) {
+  router.push(
+    `/manga/${id}/chapter/${chapter}`,
+  )
 }
 
-function removeFromBookshelf(id: number) {
-  // ลบออกได้เลยโดยไม่ต้องมี confirm dialog
+function removeFromBookshelf(
+  id: number,
+) {
   bookshelfStore.removeFromBookshelf(id)
 }
 
@@ -28,12 +42,133 @@ function logout() {
   authStore.logout()
   router.push('/')
 }
+
+/* =========================
+   Create Folder
+========================= */
+
+function createFolder() {
+  const name = window.prompt(
+    'กรุณาตั้งชื่อโฟลเดอร์',
+  )
+
+  if (name === null) {
+    return
+  }
+
+  const folderName = name.trim()
+
+  if (!folderName) {
+    window.alert(
+      'กรุณากรอกชื่อโฟลเดอร์',
+    )
+    return
+  }
+
+  const created =
+    customCategoryStore.addCategory(
+      folderName,
+    )
+
+  if (!created) {
+    window.alert(
+      'มีโฟลเดอร์ชื่อนี้อยู่แล้ว',
+    )
+    return
+  }
+
+  window.alert(
+    'สร้างโฟลเดอร์เรียบร้อยแล้ว',
+  )
+}
+
+/* =========================
+   Open Folder
+========================= */
+
+function openFolder(
+  id: number,
+) {
+  router.push(
+    `/bookshelf/category/${id}`,
+  )
+}
+
+/* =========================
+   Edit Folder
+========================= */
+
+function editFolder(
+  id: number,
+) {
+  const folder =
+    customCategoryStore.getCategoryById(
+      id,
+    )
+
+  if (!folder) {
+    return
+  }
+
+  const newName = window.prompt(
+    'แก้ไขชื่อโฟลเดอร์',
+    folder.name,
+  )
+
+  if (newName === null) {
+    return
+  }
+
+  const updated =
+    customCategoryStore.updateCategory(
+      id,
+      newName,
+    )
+
+  if (!updated) {
+    window.alert(
+      'ไม่สามารถเปลี่ยนชื่อโฟลเดอร์ได้',
+    )
+  }
+}
+
+/* =========================
+   Delete Folder
+========================= */
+
+function deleteFolder(
+  id: number,
+) {
+  const folder =
+    customCategoryStore.getCategoryById(
+      id,
+    )
+
+  if (!folder) {
+    return
+  }
+
+  const confirmed =
+    window.confirm(
+      `ต้องการลบโฟลเดอร์ "${folder.name}" หรือไม่?`,
+    )
+
+  if (!confirmed) {
+    return
+  }
+
+  customCategoryStore.deleteCategory(
+    id,
+  )
+}
 </script>
 
 <template>
   <div class="bookshelf-page">
+
     <!-- Main -->
     <main class="main-content">
+
       <!-- Page Title -->
       <div class="page-title">
         <p class="section-label">
@@ -70,9 +205,120 @@ function logout() {
         </button>
       </div>
 
-      <!-- Empty -->
+      <!-- Folder Section -->
+      <section class="folder-section">
+
+        <div class="section-header">
+          <div>
+            <h2>
+              โฟลเดอร์ของฉัน
+            </h2>
+
+            <p>
+              จัดหมวดหมู่มังงะของคุณ
+            </p>
+          </div>
+
+          <button
+            type="button"
+            class="create-folder-button"
+            @click="createFolder"
+          >
+            + สร้างโฟลเดอร์
+          </button>
+        </div>
+
+        <!-- Folder List -->
+        <div
+          v-if="
+            customCategoryStore.categories
+              .length > 0
+          "
+          class="folder-grid"
+        >
+          <article
+            v-for="
+              folder in customCategoryStore.categories
+            "
+            :key="folder.id"
+            class="folder-card"
+          >
+
+            <button
+              type="button"
+              class="folder-main"
+              @click="openFolder(folder.id)"
+            >
+              <div class="folder-icon">
+                F
+              </div>
+
+              <div class="folder-info">
+                <h3>
+                  {{ folder.name }}
+                </h3>
+
+                <p>
+                  {{
+                    folder.mangaIds.length
+                  }}
+                  เรื่อง
+                </p>
+              </div>
+            </button>
+
+            <div class="folder-actions">
+
+              <button
+                type="button"
+                class="folder-edit"
+                @click="editFolder(folder.id)"
+              >
+                แก้ไข
+              </button>
+
+              <button
+                type="button"
+                class="folder-delete"
+                @click="deleteFolder(folder.id)"
+              >
+                ลบ
+              </button>
+
+            </div>
+          </article>
+        </div>
+
+        <!-- No Folder -->
+        <div
+          v-else
+          class="no-folder"
+        >
+          <h3>
+            ยังไม่มีโฟลเดอร์
+          </h3>
+
+          <p>
+            กดปุ่ม "สร้างโฟลเดอร์"
+            เพื่อสร้างชั้นหนังสือใหม่
+          </p>
+
+          <button
+            type="button"
+            class="create-folder-button"
+            @click="createFolder"
+          >
+            + สร้างโฟลเดอร์แรก
+          </button>
+        </div>
+
+      </section>
+
+      <!-- Empty Bookshelf -->
       <section
-        v-if="bookshelfStore.mangaList.length === 0"
+        v-if="
+          bookshelfStore.mangaList.length === 0
+        "
         class="empty-bookshelf"
       >
         <div class="empty-icon">
@@ -99,78 +345,112 @@ function logout() {
       <!-- Manga List -->
       <section
         v-else
-        class="manga-grid"
+        class="manga-section"
       >
-        <article
-          v-for="manga in bookshelfStore.mangaList"
-          :key="manga.id"
-          class="manga-card"
-        >
-          <!-- Cover -->
-          <button
-            type="button"
-            class="cover-button"
-            @click="openManga(manga.id)"
-          >
-            <div class="cover-wrapper">
-              <img
-                :src="manga.cover"
-                :alt="manga.title"
-                class="manga-cover"
-              />
-            </div>
-          </button>
 
-          <!-- Info -->
-          <div class="manga-info">
+        <div class="section-header">
+          <div>
             <h2>
-              {{ manga.title }}
+              มังงะของฉัน
             </h2>
 
             <p>
-              อ่านล่าสุดถึงตอนที่
-              {{ manga.chapter }}
+              มังงะที่เพิ่มไว้ในชั้นหนังสือ
             </p>
-
-            <!-- Buttons -->
-            <div class="card-actions">
-              <button
-                type="button"
-                class="continue-button"
-                @click="
-                  continueReading(
-                    manga.id,
-                    manga.chapter,
-                  )
-                "
-              >
-                อ่านต่อ
-              </button>
-
-              <button
-                type="button"
-                class="detail-button"
-                @click="openManga(manga.id)"
-              >
-                รายละเอียด
-              </button>
-
-              <button
-                type="button"
-                class="remove-button"
-                @click="removeFromBookshelf(manga.id)"
-              >
-                เอาออก
-              </button>
-            </div>
           </div>
-        </article>
+        </div>
+
+        <div class="manga-grid">
+
+          <article
+            v-for="
+              manga in bookshelfStore.mangaList
+            "
+            :key="manga.id"
+            class="manga-card"
+          >
+
+            <!-- Cover -->
+            <button
+              type="button"
+              class="cover-button"
+              @click="openManga(manga.id)"
+            >
+              <div class="cover-wrapper">
+
+                <img
+                  :src="manga.cover"
+                  :alt="manga.title"
+                  class="manga-cover"
+                />
+
+              </div>
+            </button>
+
+            <!-- Info -->
+            <div class="manga-info">
+
+              <h2>
+                {{ manga.title }}
+              </h2>
+
+              <p>
+                อ่านล่าสุดถึงตอนที่
+                {{ manga.chapter }}
+              </p>
+
+              <!-- Buttons -->
+              <div class="card-actions">
+
+                <button
+                  type="button"
+                  class="continue-button"
+                  @click="
+                    continueReading(
+                      manga.id,
+                      manga.chapter,
+                    )
+                  "
+                >
+                  อ่านต่อ
+                </button>
+
+                <button
+                  type="button"
+                  class="detail-button"
+                  @click="
+                    openManga(manga.id)
+                  "
+                >
+                  รายละเอียด
+                </button>
+
+                <button
+                  type="button"
+                  class="remove-button"
+                  @click="
+                    removeFromBookshelf(
+                      manga.id,
+                    )
+                  "
+                >
+                  เอาออก
+                </button>
+
+              </div>
+            </div>
+
+          </article>
+
+        </div>
       </section>
+
     </main>
 
     <!-- Footer -->
     <footer class="footer">
       <div class="footer-inner">
+
         <div class="footer-logo">
           Manga<span>Verse</span>
         </div>
@@ -178,8 +458,10 @@ function logout() {
         <p>
           MangaVerse — Online Manga Reading System
         </p>
+
       </div>
     </footer>
+
   </div>
 </template>
 
@@ -286,6 +568,7 @@ function logout() {
   color: #555555;
   font-size: 13px;
   cursor: pointer;
+
   transition:
     background 0.2s ease,
     border-color 0.2s ease,
@@ -299,12 +582,217 @@ function logout() {
 }
 
 /* ========================================
+   Section
+======================================== */
+
+.folder-section,
+.manga-section {
+  margin-bottom: 30px;
+}
+
+.section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  margin-bottom: 18px;
+}
+
+.section-header h2 {
+  margin: 0 0 5px;
+  font-size: 22px;
+  font-weight: 800;
+}
+
+.section-header p {
+  margin: 0;
+  color: #777777;
+  font-size: 13px;
+}
+
+/* ========================================
+   Create Folder
+======================================== */
+
+.create-folder-button {
+  min-height: 40px;
+  padding: 0 16px;
+  border: none;
+  border-radius: 8px;
+  background: #7c3aed;
+  color: #ffffff;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+
+  transition:
+    background 0.2s ease,
+    transform 0.2s ease;
+}
+
+.create-folder-button:hover {
+  background: #6d28d9;
+  transform: translateY(-1px);
+}
+
+/* ========================================
+   Folder Grid
+======================================== */
+
+.folder-grid {
+  display: grid;
+  grid-template-columns:
+    repeat(3, minmax(0, 1fr));
+  gap: 16px;
+}
+
+/* ========================================
+   Folder Card
+======================================== */
+
+.folder-card {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: #ffffff;
+  border: 1px solid #e5e5e5;
+  border-radius: 10px;
+
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.folder-card:hover {
+  transform: translateY(-2px);
+  box-shadow:
+    0 8px 20px rgba(0, 0, 0, 0.06);
+}
+
+.folder-main {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 18px;
+  border: none;
+  background: #ffffff;
+  text-align: left;
+  cursor: pointer;
+}
+
+.folder-icon {
+  width: 48px;
+  height: 48px;
+  flex-shrink: 0;
+
+  display: grid;
+  place-items: center;
+
+  border-radius: 10px;
+  background: #f1ecff;
+  color: #7c3aed;
+
+  font-size: 20px;
+  font-weight: 800;
+}
+
+.folder-info {
+  min-width: 0;
+}
+
+.folder-info h3 {
+  margin: 0 0 5px;
+  overflow: hidden;
+
+  color: #18181b;
+  font-size: 16px;
+  font-weight: 700;
+
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.folder-info p {
+  margin: 0;
+  color: #777777;
+  font-size: 12px;
+}
+
+/* ========================================
+   Folder Actions
+======================================== */
+
+.folder-actions {
+  display: flex;
+  gap: 7px;
+  padding: 0 18px 16px;
+}
+
+.folder-actions button {
+  min-height: 34px;
+  padding: 0 12px;
+  border-radius: 7px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.folder-edit {
+  flex: 1;
+  border: 1px solid #d4d4d8;
+  background: #ffffff;
+  color: #555555;
+}
+
+.folder-edit:hover {
+  border-color: #7c3aed;
+  color: #7c3aed;
+}
+
+.folder-delete {
+  border: 1px solid #f1d1d1;
+  background: #ffffff;
+  color: #d32f2f;
+}
+
+.folder-delete:hover {
+  border-color: #d32f2f;
+  background: #fff5f5;
+}
+
+/* ========================================
+   No Folder
+======================================== */
+
+.no-folder {
+  padding: 35px 20px;
+  text-align: center;
+
+  background: #ffffff;
+  border: 1px dashed #d4d4d8;
+  border-radius: 10px;
+}
+
+.no-folder h3 {
+  margin: 0 0 7px;
+  font-size: 17px;
+}
+
+.no-folder p {
+  margin: 0 0 18px;
+  color: #777777;
+  font-size: 13px;
+}
+
+/* ========================================
    Manga Grid
 ======================================== */
 
 .manga-grid {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns:
+    repeat(3, minmax(0, 1fr));
   gap: 22px;
 }
 
@@ -316,9 +804,11 @@ function logout() {
   overflow: hidden;
   display: flex;
   flex-direction: column;
+
   background: #ffffff;
   border: 1px solid #e5e5e5;
   border-radius: 10px;
+
   transition:
     transform 0.2s ease,
     box-shadow 0.2s ease;
@@ -354,6 +844,7 @@ function logout() {
   height: 100%;
   display: block;
   object-fit: cover;
+
   transition:
     transform 0.3s ease;
 }
@@ -404,6 +895,7 @@ function logout() {
   font-size: 12px;
   font-weight: 600;
   cursor: pointer;
+
   transition:
     background 0.2s ease,
     border-color 0.2s ease,
@@ -460,10 +952,13 @@ function logout() {
 
 .empty-bookshelf {
   padding: 70px 25px;
+
   display: flex;
   flex-direction: column;
   align-items: center;
+
   text-align: center;
+
   background: #ffffff;
   border: 1px solid #e5e5e5;
   border-radius: 12px;
@@ -473,11 +968,14 @@ function logout() {
   width: 60px;
   height: 60px;
   margin-bottom: 18px;
+
   display: grid;
   place-items: center;
+
   border-radius: 50%;
   background: #f1ecff;
   color: #7c3aed;
+
   font-size: 30px;
   font-weight: 400;
 }
@@ -496,12 +994,16 @@ function logout() {
 .home-button {
   min-height: 42px;
   padding: 0 20px;
+
   border: none;
   border-radius: 8px;
+
   background: #7c3aed;
   color: #ffffff;
+
   font-size: 13px;
   font-weight: 700;
+
   cursor: pointer;
 }
 
@@ -516,6 +1018,7 @@ function logout() {
 .footer {
   margin-top: 20px;
   padding: 35px 0;
+
   background: #18181b;
   color: #aaaaaa;
 }
@@ -524,6 +1027,7 @@ function logout() {
   width: 86%;
   max-width: 1300px;
   margin: 0 auto;
+
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -554,8 +1058,14 @@ function logout() {
     width: 92%;
   }
 
+  .folder-grid {
+    grid-template-columns:
+      repeat(2, minmax(0, 1fr));
+  }
+
   .manga-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns:
+      repeat(2, minmax(0, 1fr));
     gap: 18px;
   }
 }
@@ -570,8 +1080,22 @@ function logout() {
     font-size: 28px;
   }
 
+  .section-header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .create-folder-button {
+    width: 100%;
+  }
+
+  .folder-grid {
+    grid-template-columns: 1fr;
+  }
+
   .manga-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns:
+      repeat(2, minmax(0, 1fr));
     gap: 12px;
   }
 

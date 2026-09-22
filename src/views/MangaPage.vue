@@ -1,7 +1,9 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+
 import { useBookshelfStore } from '@/stores/bookshelf'
+import { useCustomCategoryStore } from '@/stores/customCategory'
 import { MangaService } from '@/services/MangaService'
 
 interface AdminChapter {
@@ -15,6 +17,9 @@ const route = useRoute()
 const router = useRouter()
 
 const bookshelfStore = useBookshelfStore()
+const customCategoryStore =
+  useCustomCategoryStore()
+
 const mangaService = new MangaService()
 
 /* ========================================
@@ -27,7 +32,7 @@ const mangaId = computed(() => {
 
 const manga = computed(() => {
   return mangaService.getMangaById(
-    mangaId.value
+    mangaId.value,
   )
 })
 
@@ -41,7 +46,7 @@ const chapterStorageKey = computed(() => {
 
 const chapters = computed<AdminChapter[]>(() => {
   const saved = localStorage.getItem(
-    chapterStorageKey.value
+    chapterStorageKey.value,
   )
 
   if (!saved) {
@@ -60,20 +65,20 @@ const chapters = computed<AdminChapter[]>(() => {
         id: Number(chapter.id),
         number: Number(chapter.number),
         title: String(
-          chapter.title ?? ''
+          chapter.title ?? '',
         ),
         imageCount: Number(
-          chapter.imageCount ?? 0
+          chapter.imageCount ?? 0,
         ),
       }))
       .filter(
         (chapter) =>
           Number.isFinite(chapter.id) &&
-          Number.isFinite(chapter.number)
+          Number.isFinite(chapter.number),
       )
       .sort(
         (a, b) =>
-          b.number - a.number
+          b.number - a.number,
       )
   } catch {
     return []
@@ -86,9 +91,18 @@ const chapters = computed<AdminChapter[]>(() => {
 
 const isInBookshelf = computed(() => {
   return bookshelfStore.isInBookshelf(
-    mangaId.value
+    mangaId.value,
   )
 })
+
+/* ========================================
+   Custom Folder
+======================================== */
+
+const showFolderModal = ref(false)
+
+const selectedCategoryId =
+  ref<number | null>(null)
 
 /* ========================================
    Navigation
@@ -103,7 +117,7 @@ function goHome() {
 ======================================== */
 
 function readChapter(
-  chapter: number
+  chapter: number,
 ) {
   if (!manga.value) {
     return
@@ -111,11 +125,11 @@ function readChapter(
 
   bookshelfStore.updateChapter(
     manga.value.id,
-    chapter
+    chapter,
   )
 
   router.push(
-    `/manga/${manga.value.id}/chapter/${chapter}`
+    `/manga/${manga.value.id}/chapter/${chapter}`,
   )
 }
 
@@ -135,7 +149,7 @@ function readLatest() {
   }
 
   readChapter(
-    latestChapter.number
+    latestChapter.number,
   )
 }
 
@@ -150,7 +164,7 @@ function toggleBookshelf() {
 
   if (isInBookshelf.value) {
     bookshelfStore.removeFromBookshelf(
-      manga.value.id
+      manga.value.id,
     )
 
     return
@@ -163,6 +177,79 @@ function toggleBookshelf() {
     chapter: 1,
   })
 }
+
+/* ========================================
+   Open Folder Modal
+======================================== */
+
+function openFolderModal() {
+  if (!manga.value) {
+    return
+  }
+
+  if (
+    customCategoryStore.categories.length ===
+    0
+  ) {
+    window.alert(
+      'ยังไม่มีโฟลเดอร์ กรุณาสร้างโฟลเดอร์ในชั้นหนังสือก่อน',
+    )
+
+    return
+  }
+
+  selectedCategoryId.value = null
+  showFolderModal.value = true
+}
+
+/* ========================================
+   Close Folder Modal
+======================================== */
+
+function closeFolderModal() {
+  showFolderModal.value = false
+  selectedCategoryId.value = null
+}
+
+/* ========================================
+   Add Manga To Folder
+======================================== */
+
+function addMangaToFolder() {
+  if (!manga.value) {
+    return
+  }
+
+  if (
+    selectedCategoryId.value === null
+  ) {
+    window.alert(
+      'กรุณาเลือกโฟลเดอร์',
+    )
+
+    return
+  }
+
+  const added =
+    customCategoryStore.addMangaToCategory(
+      selectedCategoryId.value,
+      manga.value.id,
+    )
+
+  if (!added) {
+    window.alert(
+      'มังงะเรื่องนี้มีอยู่ในโฟลเดอร์นี้แล้ว',
+    )
+
+    return
+  }
+
+  window.alert(
+    'เพิ่มมังงะเข้าโฟลเดอร์เรียบร้อยแล้ว',
+  )
+
+  closeFolderModal()
+}
 </script>
 
 <template>
@@ -170,7 +257,6 @@ function toggleBookshelf() {
     v-if="manga"
     class="manga-page"
   >
-
     <!-- Main -->
     <main class="main-content">
 
@@ -188,22 +274,17 @@ function toggleBookshelf() {
 
         <!-- Cover -->
         <div class="cover-section">
-
           <div class="cover-wrapper">
-
             <img
               :src="manga.cover"
               :alt="manga.title"
               class="manga-cover"
             />
-
           </div>
-
         </div>
 
         <!-- Information -->
         <div class="manga-info">
-
           <p class="section-label">
             MANGA DETAIL
           </p>
@@ -215,7 +296,6 @@ function toggleBookshelf() {
           <div class="meta-list">
 
             <div class="meta-item">
-
               <span>
                 ผู้เขียน
               </span>
@@ -223,11 +303,9 @@ function toggleBookshelf() {
               <strong>
                 {{ manga.author }}
               </strong>
-
             </div>
 
             <div class="meta-item">
-
               <span>
                 หมวดหมู่
               </span>
@@ -235,11 +313,9 @@ function toggleBookshelf() {
               <strong>
                 {{ manga.category }}
               </strong>
-
             </div>
 
             <div class="meta-item">
-
               <span>
                 สถานะ
               </span>
@@ -247,11 +323,9 @@ function toggleBookshelf() {
               <strong>
                 {{ manga.status }}
               </strong>
-
             </div>
 
             <div class="meta-item">
-
               <span>
                 จำนวนตอน
               </span>
@@ -259,7 +333,6 @@ function toggleBookshelf() {
               <strong>
                 {{ chapters.length }} ตอน
               </strong>
-
             </div>
 
           </div>
@@ -294,7 +367,6 @@ function toggleBookshelf() {
               }"
               @click="toggleBookshelf"
             >
-
               <template
                 v-if="isInBookshelf"
               >
@@ -304,22 +376,25 @@ function toggleBookshelf() {
               <template v-else>
                 ＋ เพิ่มเข้าชั้นหนังสือ
               </template>
+            </button>
 
+            <button
+              type="button"
+              class="folder-button"
+              @click="openFolderModal"
+            >
+              ＋ เพิ่มเข้าโฟลเดอร์
             </button>
 
           </div>
-
         </div>
-
       </section>
 
       <!-- Chapters -->
       <section class="chapter-section">
 
         <div class="section-heading">
-
           <div>
-
             <p class="section-label">
               CHAPTERS
             </p>
@@ -327,13 +402,11 @@ function toggleBookshelf() {
             <h2>
               รายชื่อตอน
             </h2>
-
           </div>
 
           <span class="chapter-count">
             {{ chapters.length }} ตอน
           </span>
-
         </div>
 
         <!-- Chapter List -->
@@ -341,7 +414,6 @@ function toggleBookshelf() {
           v-if="chapters.length > 0"
           class="chapter-grid"
         >
-
           <button
             v-for="chapter in chapters"
             :key="chapter.id"
@@ -349,11 +421,10 @@ function toggleBookshelf() {
             class="chapter-button"
             @click="
               readChapter(
-                chapter.number
+                chapter.number,
               )
             "
           >
-
             <span>
               ตอนที่ {{ chapter.number }}
             </span>
@@ -363,9 +434,7 @@ function toggleBookshelf() {
             >
               {{ chapter.title }}
             </small>
-
           </button>
-
         </div>
 
         <!-- Empty -->
@@ -373,7 +442,6 @@ function toggleBookshelf() {
           v-else
           class="empty-chapter"
         >
-
           <h3>
             ยังไม่มีตอน
           </h3>
@@ -381,16 +449,13 @@ function toggleBookshelf() {
           <p>
             มังงะเรื่องนี้ยังไม่มีตอนให้อ่าน
           </p>
-
         </div>
 
       </section>
-
     </main>
 
     <!-- Footer -->
     <footer class="footer">
-
       <div class="footer-inner">
 
         <div class="footer-logo">
@@ -402,9 +467,94 @@ function toggleBookshelf() {
         </p>
 
       </div>
-
     </footer>
 
+    <!-- Folder Modal -->
+    <div
+      v-if="showFolderModal"
+      class="modal-overlay"
+      @click.self="closeFolderModal"
+    >
+      <div class="folder-modal">
+
+        <div class="modal-header">
+          <div>
+            <p class="section-label">
+              ADD TO FOLDER
+            </p>
+
+            <h2>
+              เลือกโฟลเดอร์
+            </h2>
+          </div>
+
+          <button
+            type="button"
+            class="modal-close"
+            @click="closeFolderModal"
+          >
+            ×
+          </button>
+        </div>
+
+        <div class="folder-list">
+
+          <label
+            v-for="folder in customCategoryStore.categories"
+            :key="folder.id"
+            class="folder-option"
+            :class="{
+              selected:
+                selectedCategoryId ===
+                folder.id
+            }"
+          >
+            <input
+              v-model="selectedCategoryId"
+              type="radio"
+              name="folder"
+              :value="folder.id"
+            />
+
+            <div class="folder-option-icon">
+              F
+            </div>
+
+            <div class="folder-option-info">
+              <strong>
+                {{ folder.name }}
+              </strong>
+
+              <span>
+                {{ folder.mangaIds.length }}
+                เรื่อง
+              </span>
+            </div>
+          </label>
+
+        </div>
+
+        <div class="modal-actions">
+
+          <button
+            type="button"
+            class="modal-cancel"
+            @click="closeFolderModal"
+          >
+            ยกเลิก
+          </button>
+
+          <button
+            type="button"
+            class="modal-confirm"
+            @click="addMangaToFolder"
+          >
+            เพิ่มเข้าโฟลเดอร์
+          </button>
+
+        </div>
+      </div>
+    </div>
   </div>
 
   <!-- Not Found -->
@@ -412,7 +562,6 @@ function toggleBookshelf() {
     v-else
     class="not-found"
   >
-
     <h1>
       ไม่พบมังงะ
     </h1>
@@ -428,7 +577,6 @@ function toggleBookshelf() {
     >
       กลับหน้าแรก
     </button>
-
   </div>
 </template>
 
@@ -600,7 +748,8 @@ function toggleBookshelf() {
 }
 
 .read-button,
-.bookshelf-button {
+.bookshelf-button,
+.folder-button {
   min-height: 44px;
   padding: 0 20px;
   border-radius: 8px;
@@ -654,6 +803,22 @@ function toggleBookshelf() {
 }
 
 .bookshelf-button.added {
+  border-color: #7c3aed;
+  background: #f5f3ff;
+  color: #7c3aed;
+}
+
+/* ========================================
+   Folder Button
+======================================== */
+
+.folder-button {
+  border: 1px solid #d4d4d8;
+  background: #ffffff;
+  color: #18181b;
+}
+
+.folder-button:hover {
   border-color: #7c3aed;
   background: #f5f3ff;
   color: #7c3aed;
@@ -770,6 +935,181 @@ function toggleBookshelf() {
   margin: 0;
   color: #777777;
   font-size: 14px;
+}
+
+/* ========================================
+   Folder Modal
+======================================== */
+
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: rgba(0, 0, 0, 0.45);
+}
+
+.folder-modal {
+  width: 100%;
+  max-width: 500px;
+  max-height: 85vh;
+  overflow-y: auto;
+  padding: 25px;
+  background: #ffffff;
+  border-radius: 14px;
+  box-shadow:
+    0 20px 50px rgba(0, 0, 0, 0.15);
+}
+
+.modal-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+  margin-bottom: 22px;
+}
+
+.modal-header .section-label {
+  margin-bottom: 5px;
+}
+
+.modal-header h2 {
+  margin: 0;
+  color: #18181b;
+  font-size: 24px;
+}
+
+.modal-close {
+  width: 34px;
+  height: 34px;
+  flex-shrink: 0;
+  border: none;
+  border-radius: 7px;
+  background: #f5f5f5;
+  color: #555555;
+  font-size: 24px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.modal-close:hover {
+  background: #eeeeee;
+  color: #18181b;
+}
+
+/* ========================================
+   Folder List
+======================================== */
+
+.folder-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.folder-option {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid #e5e5e5;
+  border-radius: 9px;
+  background: #ffffff;
+  cursor: pointer;
+  transition:
+    border-color 0.2s ease,
+    background 0.2s ease;
+}
+
+.folder-option:hover {
+  border-color: #c4b5fd;
+  background: #faf9ff;
+}
+
+.folder-option.selected {
+  border-color: #7c3aed;
+  background: #f5f3ff;
+}
+
+.folder-option input {
+  width: 17px;
+  height: 17px;
+  flex-shrink: 0;
+  accent-color: #7c3aed;
+}
+
+.folder-option-icon {
+  width: 40px;
+  height: 40px;
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  border-radius: 8px;
+  background: #f1ecff;
+  color: #7c3aed;
+  font-weight: 800;
+}
+
+.folder-option-info {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.folder-option-info strong {
+  overflow: hidden;
+  color: #18181b;
+  font-size: 14px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.folder-option-info span {
+  color: #777777;
+  font-size: 12px;
+}
+
+/* ========================================
+   Modal Actions
+======================================== */
+
+.modal-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 22px;
+}
+
+.modal-actions button {
+  flex: 1;
+  min-height: 42px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.modal-cancel {
+  border: 1px solid #d4d4d8;
+  background: #ffffff;
+  color: #555555;
+}
+
+.modal-cancel:hover {
+  background: #f5f5f5;
+}
+
+.modal-confirm {
+  border: 1px solid #7c3aed;
+  background: #7c3aed;
+  color: #ffffff;
+}
+
+.modal-confirm:hover {
+  background: #6d28d9;
 }
 
 /* ========================================
@@ -927,7 +1267,8 @@ function toggleBookshelf() {
   }
 
   .read-button,
-  .bookshelf-button {
+  .bookshelf-button,
+  .folder-button {
     width: 100%;
   }
 
@@ -947,6 +1288,10 @@ function toggleBookshelf() {
   .chapter-grid {
     grid-template-columns:
       repeat(2, minmax(0, 1fr));
+  }
+
+  .folder-modal {
+    padding: 20px;
   }
 
   .footer-inner {
@@ -970,5 +1315,4 @@ function toggleBookshelf() {
   .chapter-button {
     min-height: 40px;
   }
-}
-</style>
+}</style>

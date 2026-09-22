@@ -6,10 +6,12 @@ import ReadingPage from '@/views/ReadingPage.vue'
 import LoginView from '@/views/LoginView.vue'
 import RegisterView from '@/views/RegisterView.vue'
 import BookshelfView from '@/views/BookshelfView.vue'
+import CustomCategoryView from '@/views/CustomCategoryView.vue'
 import AdminView from '@/views/AdminView.vue'
 import AdminMangaView from '@/views/AdminMangaView.vue'
-import { useAuthStore } from '@/stores/auth'
 import CategoryView from '@/views/CategoryView.vue'
+
+import { useAuthStore } from '@/stores/auth'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -54,6 +56,16 @@ const router = createRouter({
       },
     },
 
+    // โฟลเดอร์ใน Bookshelf
+    {
+      path: '/bookshelf/category/:id',
+      name: 'custom-category',
+      component: CustomCategoryView,
+      meta: {
+        requiresAuth: true,
+      },
+    },
+
     {
       path: '/admin',
       name: 'admin',
@@ -71,6 +83,7 @@ const router = createRouter({
         requiresAdmin: true,
       },
     },
+
     {
       path: '/category',
       name: 'category',
