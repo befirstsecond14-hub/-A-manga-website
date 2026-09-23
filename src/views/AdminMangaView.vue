@@ -720,6 +720,9 @@ async function convertSelectedFiles(
 
 async function saveChapter() {
   if (isSavingChapter.value) {
+    console.log(
+      '[saveChapter] กำลังบันทึกอยู่แล้ว ข้ามการเรียกซ้ำ'
+    )
     return
   }
 
@@ -733,6 +736,10 @@ async function saveChapter() {
     !Number.isFinite(number) ||
     number < 1
   ) {
+    console.warn(
+      '[saveChapter] เลขตอนไม่ถูกต้อง:',
+      chapterForm.number
+    )
     toast(
       'กรุณากรอกเลขตอนให้ถูกต้อง'
     )
@@ -740,6 +747,9 @@ async function saveChapter() {
   }
 
   if (!title) {
+    console.warn(
+      '[saveChapter] ไม่ได้กรอกชื่อตอน'
+    )
     toast('กรุณากรอกชื่อตอน')
     return
   }
@@ -768,6 +778,10 @@ async function saveChapter() {
     )
 
   if (duplicate) {
+    console.warn(
+      '[saveChapter] เลขตอนซ้ำ:',
+      number
+    )
     toast('เลขตอนนี้มีอยู่แล้ว')
     return
   }
@@ -842,6 +856,13 @@ async function saveChapter() {
         )
 
       if (!chapter) {
+        console.error(
+          '[saveChapter] ไม่พบตอนที่ต้องการแก้ไข id:',
+          editingChapterId.value
+        )
+        toast(
+          'ไม่พบตอนที่ต้องการแก้ไข'
+        )
         return
       }
 
@@ -896,6 +917,9 @@ async function saveChapter() {
       saveChapters()
 
     if (!saved) {
+      console.error(
+        '[saveChapter] saveChapters() คืนค่า false — localStorage อาจเต็ม'
+      )
       toast(
         'พื้นที่จัดเก็บไม่เพียงพอ กรุณาใช้ไฟล์ขนาดเล็กลง'
       )
@@ -911,7 +935,29 @@ async function saveChapter() {
       editingChapterId.value !==
       null
 
-    updateLatestChapter()
+    /*
+     * แยก try/catch ตรงนี้
+     * เผื่อ updateManga() ที่เรียกใน
+     * updateLatestChapter() error
+     * แล้วทำให้ popup ไม่ปิด
+     */
+    try {
+      updateLatestChapter()
+    } catch (err) {
+      console.error(
+        '[saveChapter] updateLatestChapter() error:',
+        err
+      )
+    }
+
+    console.log(
+      '[saveChapter] บันทึกสำเร็จ ปิด popup',
+      {
+        isEditing,
+        chaptersCount:
+          chapters.value.length,
+      }
+    )
 
     /*
      * บันทึกสำเร็จแล้ว
@@ -926,7 +972,7 @@ async function saveChapter() {
     )
   } catch (error) {
     console.error(
-      'Save chapter error:',
+      '[saveChapter] Save chapter error:',
       error
     )
 
@@ -1175,6 +1221,9 @@ function clearPreviewUrls() {
 
 function closeChapterModal() {
   if (isSavingChapter.value) {
+    console.warn(
+      '[closeChapterModal] ยังบันทึกอยู่ ปิดไม่ได้'
+    )
     return
   }
 
