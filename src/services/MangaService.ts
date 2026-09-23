@@ -10,85 +10,22 @@ export class MangaService {
   }
 
   // ========================================
-  // DEFAULT DATA
-  // ========================================
-
-  private getDefaultManga(): Manga[] {
-    return [
-      new Manga(
-        1,
-        'One Piece',
-        'Eiichiro Oda',
-        'เรื่องราวของโจรสลัดและการผจญภัย',
-        'Action',
-        100,
-        'กำลังดำเนินเรื่อง',
-        'https://images.unsplash.com/photo-1613376023733-0a73315d9b06?w=600'
-      ),
-
-      new Manga(
-        2,
-        'Solo Leveling',
-        'Chugong',
-        'เรื่องราวของซองจินอู ผู้ที่เริ่มต้นจากนักล่าที่อ่อนแอ',
-        'Fantasy',
-        100,
-        'จบแล้ว',
-        'https://images.unsplash.com/photo-1578632767115-351597cf2477?w=600'
-      ),
-
-      new Manga(
-        3,
-        'Naruto',
-        'Masashi Kishimoto',
-        'เรื่องราวของนินจาหนุ่มนารูโตะ',
-        'Action',
-        100,
-        'จบแล้ว',
-        'https://images.unsplash.com/photo-1560419015-7c427e8ae5ba?w=600'
-      ),
-
-      new Manga(
-        4,
-        'Demon Slayer',
-        'Koyoharu Gotouge',
-        'เรื่องราวของทันจิโร่ที่ออกเดินทางเพื่อช่วยน้องสาว',
-        'Action',
-        100,
-        'จบแล้ว',
-        'https://images.unsplash.com/photo-1607604276583-eef5d076aa5f?w=600'
-      )
-    ]
-  }
-
-  // ========================================
   // LOAD
   // ========================================
 
   private loadManga(): Manga[] {
     const saved = localStorage.getItem(STORAGE_KEY)
 
-    // ถ้ายังไม่มีข้อมูล ให้สร้างข้อมูลเริ่มต้น
+    // ถ้ายังไม่มีข้อมูล ให้เริ่มต้นเป็นข้อมูลว่าง
     if (!saved) {
-      const defaultManga = this.getDefaultManga()
-
-      // บันทึกข้อมูลเริ่มต้นลง localStorage
-      this.mangaList = defaultManga
-      this.saveManga()
-
-      return defaultManga
+      return []
     }
 
     try {
       const parsed = JSON.parse(saved)
 
       if (!Array.isArray(parsed)) {
-        const defaultManga = this.getDefaultManga()
-
-        this.mangaList = defaultManga
-        this.saveManga()
-
-        return defaultManga
+        return []
       }
 
       return parsed.map((manga) => {
@@ -100,21 +37,16 @@ export class MangaService {
           manga.category ?? manga._category,
           manga.latestChapter ?? manga._latestChapter ?? 0,
           manga.status ?? manga._status,
-          manga.cover ?? manga._cover ?? ''
+          manga.cover ?? manga._cover ?? '',
         )
       })
     } catch (error) {
       console.error(
         'ไม่สามารถโหลดข้อมูลมังงะได้',
-        error
+        error,
       )
 
-      const defaultManga = this.getDefaultManga()
-
-      this.mangaList = defaultManga
-      this.saveManga()
-
-      return defaultManga
+      return []
     }
   }
 
@@ -131,12 +63,12 @@ export class MangaService {
       category: manga.category,
       latestChapter: manga.latestChapter,
       status: manga.status,
-      cover: manga.cover
+      cover: manga.cover,
     }))
 
     localStorage.setItem(
       STORAGE_KEY,
-      JSON.stringify(data)
+      JSON.stringify(data),
     )
   }
 
@@ -162,10 +94,10 @@ export class MangaService {
   // ========================================
 
   getMangaById(
-    id: number
+    id: number,
   ): Manga | undefined {
     return this.mangaList.find(
-      (manga) => manga.id === id
+      (manga) => manga.id === id,
     )
   }
 
@@ -174,12 +106,12 @@ export class MangaService {
   // ========================================
 
   updateManga(
-    updatedManga: Manga
+    updatedManga: Manga,
   ): boolean {
     const index =
       this.mangaList.findIndex(
         (manga) =>
-          manga.id === updatedManga.id
+          manga.id === updatedManga.id,
       )
 
     if (index === -1) {
@@ -198,11 +130,11 @@ export class MangaService {
   // ========================================
 
   deleteManga(
-    id: number
+    id: number,
   ): boolean {
     const index =
       this.mangaList.findIndex(
-        (manga) => manga.id === id
+        (manga) => manga.id === id,
       )
 
     if (index === -1) {
