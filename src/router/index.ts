@@ -1,8 +1,8 @@
 import { createRouter, createWebHistory } from 'vue-router'
 
 import HomeView from '@/views/HomeView.vue'
-import MangaPage from '@/views/MangaPage.vue'
-import ReadingPage from '@/views/ReadingPage.vue'
+import MangaView from '@/views/MangaView.vue'
+import ReadingView from '@/views/ReadingView.vue'
 import LoginView from '@/views/LoginView.vue'
 import RegisterView from '@/views/RegisterView.vue'
 import BookshelfView from '@/views/BookshelfView.vue'
@@ -26,13 +26,13 @@ const router = createRouter({
     {
       path: '/manga/:id',
       name: 'manga',
-      component: MangaPage,
+      component: MangaView,
     },
 
     {
       path: '/manga/:id/chapter/:chapter',
       name: 'reading',
-      component: ReadingPage,
+      component: ReadingView,
     },
 
     {
