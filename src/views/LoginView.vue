@@ -1,58 +1,136 @@
 <script setup lang="ts">
+
 import { ref } from 'vue'
+
 import { useRouter } from 'vue-router'
+
 import { useAuthStore } from '@/stores/auth'
 
+
 const router = useRouter()
+
 const authStore = useAuthStore()
 
 const email = ref('')
+
 const password = ref('')
+
 const errorMessage = ref('')
 
+
+/* ========================================
+   Generate User ID
+======================================== */
+
+function getUserId(email: string) {
+
+  let hash = 0
+
+  for (let i = 0; i < email.length; i++) {
+
+    hash =
+      (hash * 31 +
+        email.charCodeAt(i)) |
+      0
+
+  }
+
+  return Math.abs(hash) || 1
+}
+
+
+/* ========================================
+   Login
+======================================== */
+
 function login() {
+
   errorMessage.value = ''
 
-  // ตรวจสอบข้อมูล
-  if (!email.value || !password.value) {
+
+  /* ตรวจสอบข้อมูล */
+
+  if (
+    !email.value.trim() ||
+    !password.value
+  ) {
+
     errorMessage.value =
       'กรุณากรอกอีเมลและรหัสผ่าน'
 
     return
   }
 
-  // จำลองชื่อผู้ใช้
-  const username =
-    email.value.split('@')[0] || 'User'
 
-  // ตรวจสอบสิทธิ์
-  // admin@mangaverse.com = Admin
-  // อีเมลอื่น = User ทั่วไป
+  /* ทำ Email ให้เป็นรูปแบบเดียวกัน */
+
+  const normalizedEmail =
+    email.value
+      .trim()
+      .toLowerCase()
+
+
+  /* จำลองชื่อผู้ใช้ */
+
+  const username =
+    normalizedEmail.split('@')[0] ||
+    'User'
+
+
+  /* ตรวจสอบสิทธิ์ */
+
   const role =
-    email.value === 'admin@mangaverse.com'
+    normalizedEmail ===
+    'admin@mangaverse.com'
       ? 'admin'
       : 'user'
 
-  // บันทึกข้อมูล Login
+
+  /* สร้าง User ID */
+
+  const userId =
+    role === 'admin'
+      ? 1
+      : getUserId(normalizedEmail)
+
+
+  /* บันทึกข้อมูล Login */
+
   authStore.login(
+    userId,
     username,
-    email.value,
+    normalizedEmail,
     role,
   )
 
-  // Admin → ไปหน้า Admin
+
+  /* Admin → หน้า Admin */
+
   if (role === 'admin') {
+
     router.push('/admin')
+
     return
   }
 
-  // User ทั่วไป → ไปหน้าหลัก
+
+  /* User → หน้าหลัก */
+
   router.push('/')
+
 }
 
+
+/* ========================================
+   Register
+======================================== */
+
 function goRegister() {
+
   router.push('/register')
+
 }
+
 </script>
 
 
@@ -77,7 +155,9 @@ function goRegister() {
         </p>
 
 
-        <form @submit.prevent="login">
+        <form
+          @submit.prevent="login"
+        >
 
           <!-- Email -->
 
@@ -146,6 +226,7 @@ function goRegister() {
           </span>
 
           <button
+            type="button"
             class="register-button"
             @click="goRegister"
           >
@@ -176,29 +257,32 @@ function goRegister() {
 
 <style scoped>
 
+/* ========================================
+   Global
+======================================== */
+
 * {
   box-sizing: border-box;
 }
 
 
-/* =========================
+/* ========================================
    Page
-========================= */
+======================================== */
 
 .login-page {
   min-height: calc(100vh - 72px);
 
   display: flex;
-
   flex-direction: column;
 
   background: #f5f5f5;
 }
 
 
-/* =========================
+/* ========================================
    Main
-========================= */
+======================================== */
 
 .login-container {
   flex: 1;
@@ -206,20 +290,18 @@ function goRegister() {
   display: flex;
 
   justify-content: center;
-
   align-items: center;
 
   padding: 50px 20px;
 }
 
 
-/* =========================
+/* ========================================
    Login Card
-========================= */
+======================================== */
 
 .login-card {
   width: 100%;
-
   max-width: 430px;
 
   background: #ffffff;
@@ -229,7 +311,8 @@ function goRegister() {
   border-radius: 16px;
 
   box-shadow:
-    0 8px 30px rgba(0, 0, 0, 0.08);
+    0 8px 30px
+    rgba(0, 0, 0, 0.08);
 }
 
 
@@ -244,9 +327,9 @@ function goRegister() {
 }
 
 
-/* =========================
+/* ========================================
    Subtitle
-========================= */
+======================================== */
 
 .subtitle {
   margin: 12px 0 30px;
@@ -261,9 +344,9 @@ function goRegister() {
 }
 
 
-/* =========================
+/* ========================================
    Form
-========================= */
+======================================== */
 
 .form-group {
   margin-bottom: 20px;
@@ -296,7 +379,8 @@ function goRegister() {
 
   outline: none;
 
-  transition: border-color 0.2s;
+  transition:
+    border-color 0.2s;
 }
 
 
@@ -310,9 +394,9 @@ function goRegister() {
 }
 
 
-/* =========================
+/* ========================================
    Error
-========================= */
+======================================== */
 
 .error-message {
   margin: -5px 0 15px;
@@ -323,9 +407,9 @@ function goRegister() {
 }
 
 
-/* =========================
+/* ========================================
    Login Button
-========================= */
+======================================== */
 
 .login-button {
   width: 100%;
@@ -346,7 +430,8 @@ function goRegister() {
 
   cursor: pointer;
 
-  transition: background 0.2s;
+  transition:
+    background 0.2s;
 }
 
 
@@ -355,9 +440,9 @@ function goRegister() {
 }
 
 
-/* =========================
+/* ========================================
    Register
-========================= */
+======================================== */
 
 .register-section {
   margin-top: 25px;
@@ -400,9 +485,9 @@ function goRegister() {
 }
 
 
-/* =========================
+/* ========================================
    Footer
-========================= */
+======================================== */
 
 .footer {
   padding: 20px;
@@ -415,9 +500,9 @@ function goRegister() {
 }
 
 
-/* =========================
+/* ========================================
    Mobile
-========================= */
+======================================== */
 
 @media (max-width: 600px) {
 

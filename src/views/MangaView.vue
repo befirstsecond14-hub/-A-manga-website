@@ -1,10 +1,21 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+
+import {
+  computed,
+  ref,
+} from 'vue'
+
+import {
+  useRoute,
+  useRouter,
+} from 'vue-router'
 
 import { useBookshelfStore } from '@/stores/bookshelf'
 import { useCustomCategoryStore } from '@/stores/customCategory'
+import { useAuthStore } from '@/stores/auth'
+import { useReadingHistoryStore } from '@/stores/readingHistory'
 import { MangaService } from '@/services/mangaService'
+
 
 interface AdminChapter {
   id: number
@@ -13,14 +24,24 @@ interface AdminChapter {
   imageCount: number
 }
 
+
 const route = useRoute()
 const router = useRouter()
 
 const bookshelfStore = useBookshelfStore()
-const customCategoryStore =
-  useCustomCategoryStore()
+const customCategoryStore = useCustomCategoryStore()
+const authStore = useAuthStore()
+const readingHistoryStore = useReadingHistoryStore()
 
 const mangaService = new MangaService()
+
+
+/* ========================================
+   Load Reading History
+======================================== */
+
+readingHistoryStore.load()
+
 
 /* ========================================
    Current Manga
@@ -36,6 +57,7 @@ const manga = computed(() => {
   )
 })
 
+
 /* ========================================
    Chapters
 ======================================== */
@@ -45,6 +67,7 @@ const chapterStorageKey = computed(() => {
 })
 
 const chapters = computed<AdminChapter[]>(() => {
+
   const saved = localStorage.getItem(
     chapterStorageKey.value,
   )
@@ -54,6 +77,7 @@ const chapters = computed<AdminChapter[]>(() => {
   }
 
   try {
+
     const parsed = JSON.parse(saved)
 
     if (!Array.isArray(parsed)) {
@@ -80,20 +104,90 @@ const chapters = computed<AdminChapter[]>(() => {
         (a, b) =>
           b.number - a.number,
       )
+
   } catch {
+
     return []
+
   }
 })
+
+
+/* ========================================
+   Last Reading History
+======================================== */
+
+const lastReadingHistory = computed(() => {
+
+  if (!authStore.isLoggedIn) {
+    return undefined
+  }
+
+  if (authStore.userId <= 0) {
+    return undefined
+  }
+
+  return readingHistoryStore.getLastChapter(
+    authStore.userId,
+    mangaId.value,
+  )
+})
+
+
+/* ========================================
+   Last Read Chapter
+======================================== */
+
+const lastReadChapter = computed(() => {
+
+  const history =
+    lastReadingHistory.value
+
+  if (!history) {
+    return undefined
+  }
+
+  return chapters.value.find(
+    (chapter) =>
+      chapter.id === history.chapterId,
+  )
+})
+
+
+/* ========================================
+   Read Button Text
+======================================== */
+
+const readButtonText = computed(() => {
+
+  if (lastReadChapter.value) {
+
+    return `อ่านต่อ ตอนที่ ${lastReadChapter.value.number}`
+
+  }
+
+  if (chapters.value.length > 0) {
+
+    return 'อ่านตอนล่าสุด'
+
+  }
+
+  return 'ยังไม่มีตอน'
+})
+
 
 /* ========================================
    Bookshelf
 ======================================== */
 
 const isInBookshelf = computed(() => {
+
   return bookshelfStore.isInBookshelf(
     mangaId.value,
   )
+
 })
+
 
 /* ========================================
    Custom Folder
@@ -104,13 +198,17 @@ const showFolderModal = ref(false)
 const selectedCategoryId =
   ref<number | null>(null)
 
+
 /* ========================================
    Navigation
 ======================================== */
 
 function goHome() {
+
   router.push('/')
+
 }
+
 
 /* ========================================
    Read Chapter
@@ -119,6 +217,7 @@ function goHome() {
 function readChapter(
   chapter: number,
 ) {
+
   if (!manga.value) {
     return
   }
@@ -133,16 +232,28 @@ function readChapter(
   )
 }
 
+
 /* ========================================
-   Read Latest Chapter
+   Read Latest / Continue Reading
 ======================================== */
 
 function readLatest() {
+
   if (!manga.value) {
     return
   }
 
-  const latestChapter = chapters.value[0]
+  if (lastReadChapter.value) {
+
+    readChapter(
+      lastReadChapter.value.number,
+    )
+
+    return
+  }
+
+  const latestChapter =
+    chapters.value[0]
 
   if (!latestChapter) {
     return
@@ -153,16 +264,19 @@ function readLatest() {
   )
 }
 
+
 /* ========================================
    Add / Remove Bookshelf
 ======================================== */
 
 function toggleBookshelf() {
+
   if (!manga.value) {
     return
   }
 
   if (isInBookshelf.value) {
+
     bookshelfStore.removeFromBookshelf(
       manga.value.id,
     )
@@ -171,26 +285,34 @@ function toggleBookshelf() {
   }
 
   bookshelfStore.addToBookshelf({
+
     id: manga.value.id,
+
     title: manga.value.title,
+
     cover: manga.value.cover,
+
     chapter: 1,
+
   })
 }
+
 
 /* ========================================
    Open Folder Modal
 ======================================== */
 
 function openFolderModal() {
+
   if (!manga.value) {
     return
   }
 
   if (
-    customCategoryStore.categories.length ===
-    0
+    customCategoryStore.categories
+      .length === 0
   ) {
+
     window.alert(
       'ยังไม่มีโฟลเดอร์ กรุณาสร้างโฟลเดอร์ในชั้นหนังสือก่อน',
     )
@@ -199,23 +321,29 @@ function openFolderModal() {
   }
 
   selectedCategoryId.value = null
+
   showFolderModal.value = true
 }
+
 
 /* ========================================
    Close Folder Modal
 ======================================== */
 
 function closeFolderModal() {
+
   showFolderModal.value = false
+
   selectedCategoryId.value = null
 }
+
 
 /* ========================================
    Add Manga To Folder
 ======================================== */
 
 function addMangaToFolder() {
+
   if (!manga.value) {
     return
   }
@@ -223,6 +351,7 @@ function addMangaToFolder() {
   if (
     selectedCategoryId.value === null
   ) {
+
     window.alert(
       'กรุณาเลือกโฟลเดอร์',
     )
@@ -237,6 +366,7 @@ function addMangaToFolder() {
     )
 
   if (!added) {
+
     window.alert(
       'มังงะเรื่องนี้มีอยู่ในโฟลเดอร์นี้แล้ว',
     )
@@ -250,17 +380,21 @@ function addMangaToFolder() {
 
   closeFolderModal()
 }
+
 </script>
 
+
 <template>
+
   <div
     v-if="manga"
     class="manga-page"
   >
-    <!-- Main -->
+
     <main class="main-content">
 
       <!-- Back -->
+
       <button
         type="button"
         class="back-button"
@@ -269,33 +403,46 @@ function addMangaToFolder() {
         ← กลับหน้าแรก
       </button>
 
+
       <!-- Manga Detail -->
+
       <section class="manga-detail">
 
         <!-- Cover -->
+
         <div class="cover-section">
+
           <div class="cover-wrapper">
+
             <img
               :src="manga.cover"
               :alt="manga.title"
               class="manga-cover"
             />
+
           </div>
+
         </div>
 
+
         <!-- Information -->
+
         <div class="manga-info">
+
           <p class="section-label">
             MANGA DETAIL
           </p>
+
 
           <h1>
             {{ manga.title }}
           </h1>
 
+
           <div class="meta-list">
 
             <div class="meta-item">
+
               <span>
                 ผู้เขียน
               </span>
@@ -303,9 +450,12 @@ function addMangaToFolder() {
               <strong>
                 {{ manga.author }}
               </strong>
+
             </div>
 
+
             <div class="meta-item">
+
               <span>
                 หมวดหมู่
               </span>
@@ -313,9 +463,12 @@ function addMangaToFolder() {
               <strong>
                 {{ manga.category }}
               </strong>
+
             </div>
 
+
             <div class="meta-item">
+
               <span>
                 สถานะ
               </span>
@@ -323,9 +476,12 @@ function addMangaToFolder() {
               <strong>
                 {{ manga.status }}
               </strong>
+
             </div>
 
+
             <div class="meta-item">
+
               <span>
                 จำนวนตอน
               </span>
@@ -333,15 +489,19 @@ function addMangaToFolder() {
               <strong>
                 {{ chapters.length }} ตอน
               </strong>
+
             </div>
 
           </div>
+
 
           <p class="description">
             {{ manga.description }}
           </p>
 
-          <!-- Actions -->
+
+          <!-- Main Buttons -->
+
           <div class="main-actions">
 
             <button
@@ -352,12 +512,9 @@ function addMangaToFolder() {
               "
               @click="readLatest"
             >
-              {{
-                chapters.length > 0
-                  ? 'อ่านตอนล่าสุด'
-                  : 'ยังไม่มีตอน'
-              }}
+              {{ readButtonText }}
             </button>
+
 
             <button
               type="button"
@@ -367,6 +524,7 @@ function addMangaToFolder() {
               }"
               @click="toggleBookshelf"
             >
+
               <template
                 v-if="isInBookshelf"
               >
@@ -376,7 +534,9 @@ function addMangaToFolder() {
               <template v-else>
                 ＋ เพิ่มเข้าชั้นหนังสือ
               </template>
+
             </button>
+
 
             <button
               type="button"
@@ -387,14 +547,20 @@ function addMangaToFolder() {
             </button>
 
           </div>
+
         </div>
+
       </section>
 
+
       <!-- Chapters -->
+
       <section class="chapter-section">
 
         <div class="section-heading">
+
           <div>
+
             <p class="section-label">
               CHAPTERS
             </p>
@@ -402,18 +568,22 @@ function addMangaToFolder() {
             <h2>
               รายชื่อตอน
             </h2>
+
           </div>
+
 
           <span class="chapter-count">
             {{ chapters.length }} ตอน
           </span>
+
         </div>
 
-        <!-- Chapter List -->
+
         <div
           v-if="chapters.length > 0"
           class="chapter-grid"
         >
+
           <button
             v-for="chapter in chapters"
             :key="chapter.id"
@@ -425,6 +595,7 @@ function addMangaToFolder() {
               )
             "
           >
+
             <span>
               ตอนที่ {{ chapter.number }}
             </span>
@@ -434,14 +605,17 @@ function addMangaToFolder() {
             >
               {{ chapter.title }}
             </small>
+
           </button>
+
         </div>
 
-        <!-- Empty -->
+
         <div
           v-else
           class="empty-chapter"
         >
+
           <h3>
             ยังไม่มีตอน
           </h3>
@@ -449,13 +623,18 @@ function addMangaToFolder() {
           <p>
             มังงะเรื่องนี้ยังไม่มีตอนให้อ่าน
           </p>
+
         </div>
 
       </section>
+
     </main>
 
+
     <!-- Footer -->
+
     <footer class="footer">
+
       <div class="footer-inner">
 
         <div class="footer-logo">
@@ -467,18 +646,24 @@ function addMangaToFolder() {
         </p>
 
       </div>
+
     </footer>
 
+
     <!-- Folder Modal -->
+
     <div
       v-if="showFolderModal"
       class="modal-overlay"
       @click.self="closeFolderModal"
     >
+
       <div class="folder-modal">
 
         <div class="modal-header">
+
           <div>
+
             <p class="section-label">
               ADD TO FOLDER
             </p>
@@ -486,7 +671,9 @@ function addMangaToFolder() {
             <h2>
               เลือกโฟลเดอร์
             </h2>
+
           </div>
+
 
           <button
             type="button"
@@ -495,12 +682,17 @@ function addMangaToFolder() {
           >
             ×
           </button>
+
         </div>
+
 
         <div class="folder-list">
 
           <label
-            v-for="folder in customCategoryStore.categories"
+            v-for="
+              folder in
+              customCategoryStore.categories
+            "
             :key="folder.id"
             class="folder-option"
             :class="{
@@ -509,6 +701,7 @@ function addMangaToFolder() {
                 folder.id
             }"
           >
+
             <input
               v-model="selectedCategoryId"
               type="radio"
@@ -516,11 +709,14 @@ function addMangaToFolder() {
               :value="folder.id"
             />
 
+
             <div class="folder-option-icon">
               F
             </div>
 
+
             <div class="folder-option-info">
+
               <strong>
                 {{ folder.name }}
               </strong>
@@ -529,10 +725,13 @@ function addMangaToFolder() {
                 {{ folder.mangaIds.length }}
                 เรื่อง
               </span>
+
             </div>
+
           </label>
 
         </div>
+
 
         <div class="modal-actions">
 
@@ -544,6 +743,7 @@ function addMangaToFolder() {
             ยกเลิก
           </button>
 
+
           <button
             type="button"
             class="modal-confirm"
@@ -553,15 +753,21 @@ function addMangaToFolder() {
           </button>
 
         </div>
+
       </div>
+
     </div>
+
   </div>
 
+
   <!-- Not Found -->
+
   <div
     v-else
     class="not-found"
   >
+
     <h1>
       ไม่พบมังงะ
     </h1>
@@ -577,30 +783,35 @@ function addMangaToFolder() {
     >
       กลับหน้าแรก
     </button>
+
   </div>
+
 </template>
 
+
 <style scoped>
+
 /* ========================================
-   Manga Page
+   Page
 ======================================== */
 
 .manga-page {
   min-height: 100vh;
-  background: #f7f7f8;
-  color: #18181b;
+  background: #f7f7f9;
+  color: #171717;
 }
+
 
 /* ========================================
    Main
 ======================================== */
 
 .main-content {
-  width: 86%;
-  max-width: 1300px;
+  width: min(1200px, calc(100% - 40px));
   margin: 0 auto;
-  padding: 35px 0 70px;
+  padding: 28px 0 70px;
 }
+
 
 /* ========================================
    Back Button
@@ -609,27 +820,30 @@ function addMangaToFolder() {
 .back-button {
   display: inline-flex;
   align-items: center;
-  justify-content: center;
-  margin-bottom: 25px;
-  padding: 9px 15px;
-  border: 1px solid #e5e5e5;
-  border-radius: 8px;
-  background: #ffffff;
-  color: #18181b;
-  font-size: 14px;
+  gap: 8px;
+
+  border: none;
+  background: transparent;
+
+  color: #555;
+  font-size: 15px;
   font-weight: 600;
+
+  padding: 8px 0;
+  margin-bottom: 24px;
+
   cursor: pointer;
+
   transition:
-    background 0.2s ease,
     color 0.2s ease,
-    border-color 0.2s ease;
+    transform 0.2s ease;
 }
 
 .back-button:hover {
-  background: #7c3aed;
-  border-color: #7c3aed;
-  color: #ffffff;
+  color: #7138df;
+  transform: translateX(-3px);
 }
+
 
 /* ========================================
    Manga Detail
@@ -637,62 +851,87 @@ function addMangaToFolder() {
 
 .manga-detail {
   display: grid;
-  grid-template-columns: 300px 1fr;
-  gap: 45px;
-  padding: 30px;
-  background: #ffffff;
-  border: 1px solid #e5e5e5;
-  border-radius: 14px;
+  grid-template-columns: 360px minmax(0, 1fr);
+
+  gap: 55px;
+
+  background: #fff;
+
+  border: 1px solid #e8e8ed;
+  border-radius: 24px;
+
+  padding: 36px;
+
+  box-shadow:
+    0 10px 35px rgba(0, 0, 0, 0.05);
 }
+
 
 /* ========================================
    Cover
 ======================================== */
 
 .cover-section {
-  width: 100%;
+  display: flex;
+  justify-content: center;
 }
 
 .cover-wrapper {
   width: 100%;
-  aspect-ratio: 3 / 4;
+  max-width: 340px;
+
   overflow: hidden;
-  background: #eeeeee;
-  border-radius: 10px;
+
+  border-radius: 18px;
+
+  background: #eee;
+
+  box-shadow:
+    0 14px 35px rgba(0, 0, 0, 0.15);
 }
 
 .manga-cover {
-  width: 100%;
-  height: 100%;
   display: block;
+
+  width: 100%;
+  height: 480px;
+
   object-fit: cover;
 }
 
+
 /* ========================================
-   Manga Information
+   Information
 ======================================== */
 
 .manga-info {
+  min-width: 0;
+
   display: flex;
   flex-direction: column;
   justify-content: center;
 }
 
 .section-label {
-  margin: 0 0 7px;
-  color: #7c3aed;
-  font-size: 12px;
-  font-weight: 700;
-  letter-spacing: 1.5px;
+  margin: 0 0 10px;
+
+  color: #7138df;
+
+  font-size: 13px;
+  font-weight: 800;
+
+  letter-spacing: 2px;
 }
 
 .manga-info h1 {
   margin: 0 0 25px;
-  color: #18181b;
-  font-size: 40px;
-  font-weight: 800;
-  line-height: 1.2;
+
+  font-size: clamp(32px, 5vw, 52px);
+  line-height: 1.1;
+
+  color: #151515;
 }
+
 
 /* ========================================
    Meta
@@ -700,42 +939,51 @@ function addMangaToFolder() {
 
 .meta-list {
   display: grid;
-  grid-template-columns:
-    repeat(2, minmax(0, 1fr));
-  gap: 12px;
-  margin-bottom: 22px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+
+  gap: 14px;
+
+  margin-bottom: 25px;
 }
 
 .meta-item {
   display: flex;
   flex-direction: column;
   gap: 5px;
-  padding: 14px;
-  background: #f7f7f8;
-  border-radius: 8px;
+
+  padding: 15px;
+
+  background: #f7f5fc;
+
+  border-radius: 12px;
 }
 
 .meta-item span {
-  color: #777777;
-  font-size: 12px;
+  color: #777;
+
+  font-size: 13px;
 }
 
 .meta-item strong {
-  color: #18181b;
-  font-size: 14px;
+  color: #222;
+
+  font-size: 15px;
 }
+
 
 /* ========================================
    Description
 ======================================== */
 
 .description {
-  max-width: 700px;
-  margin: 0 0 25px;
-  color: #555555;
+  margin: 0 0 30px;
+
+  color: #666;
+
   font-size: 15px;
   line-height: 1.8;
 }
+
 
 /* ========================================
    Main Actions
@@ -743,121 +991,126 @@ function addMangaToFolder() {
 
 .main-actions {
   display: flex;
-  align-items: center;
+  flex-wrap: wrap;
+
   gap: 12px;
 }
 
-.read-button,
-.bookshelf-button,
-.folder-button {
-  min-height: 44px;
+.main-actions button {
+  min-height: 46px;
+
+  border-radius: 12px;
+
   padding: 0 20px;
-  border-radius: 8px;
+
   font-size: 14px;
-  font-weight: 600;
+  font-weight: 700;
+
   cursor: pointer;
+
   transition:
-    background 0.2s ease,
-    color 0.2s ease,
-    border-color 0.2s ease,
-    transform 0.2s ease;
+    transform 0.2s ease,
+    box-shadow 0.2s ease,
+    background 0.2s ease;
 }
 
-/* ========================================
-   Read Button
-======================================== */
+.main-actions button:hover:not(:disabled) {
+  transform: translateY(-2px);
+}
+
+.main-actions button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+
+/* Read */
 
 .read-button {
-  border: 1px solid #7c3aed;
-  background: #7c3aed;
-  color: #ffffff;
+  border: none;
+
+  background: #7138df;
+  color: #fff;
+
+  box-shadow:
+    0 8px 20px rgba(113, 56, 223, 0.25);
 }
 
-.read-button:hover {
-  background: #6d28d9;
-  border-color: #6d28d9;
-  transform: translateY(-1px);
+.read-button:hover:not(:disabled) {
+  background: #6027cf;
 }
 
-.read-button:disabled {
-  background: #d4d4d8;
-  border-color: #d4d4d8;
-  color: #777777;
-  cursor: not-allowed;
-  transform: none;
-}
 
-/* ========================================
-   Bookshelf
-======================================== */
+/* Bookshelf */
 
 .bookshelf-button {
-  border: 1px solid #d4d4d8;
-  background: #ffffff;
-  color: #18181b;
-}
+  border: 1px solid #7138df;
 
-.bookshelf-button:hover {
-  border-color: #7c3aed;
-  color: #7c3aed;
+  background: #fff;
+  color: #7138df;
 }
 
 .bookshelf-button.added {
-  border-color: #7c3aed;
-  background: #f5f3ff;
-  color: #7c3aed;
+  background: #f1ebff;
 }
 
-/* ========================================
-   Folder Button
-======================================== */
+
+/* Folder */
 
 .folder-button {
-  border: 1px solid #d4d4d8;
-  background: #ffffff;
-  color: #18181b;
+  border: 1px solid #ddd;
+
+  background: #fff;
+  color: #444;
 }
 
 .folder-button:hover {
-  border-color: #7c3aed;
-  background: #f5f3ff;
-  color: #7c3aed;
+  border-color: #7138df;
+  color: #7138df;
 }
 
+
 /* ========================================
-   Chapter Section
+   Chapters
 ======================================== */
 
 .chapter-section {
   margin-top: 45px;
-  padding: 30px;
-  background: #ffffff;
-  border: 1px solid #e5e5e5;
-  border-radius: 14px;
-}
 
-/* ========================================
-   Section Heading
-======================================== */
+  background: #fff;
+
+  border: 1px solid #e8e8ed;
+  border-radius: 24px;
+
+  padding: 32px;
+
+  box-shadow:
+    0 10px 35px rgba(0, 0, 0, 0.04);
+}
 
 .section-heading {
   display: flex;
   align-items: flex-end;
   justify-content: space-between;
+
+  gap: 20px;
+
   margin-bottom: 25px;
 }
 
 .section-heading h2 {
   margin: 0;
-  color: #18181b;
-  font-size: 28px;
-  font-weight: 800;
+
+  font-size: 30px;
 }
 
 .chapter-count {
-  color: #777777;
-  font-size: 13px;
+  color: #777;
+
+  font-size: 14px;
+  font-weight: 600;
 }
+
 
 /* ========================================
    Chapter Grid
@@ -865,287 +1118,347 @@ function addMangaToFolder() {
 
 .chapter-grid {
   display: grid;
+
   grid-template-columns:
-    repeat(5, minmax(0, 1fr));
-  gap: 10px;
+    repeat(4, minmax(0, 1fr));
+
+  gap: 14px;
 }
 
 .chapter-button {
-  min-height: 60px;
-  padding: 10px;
   display: flex;
   flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 4px;
-  border: 1px solid #e5e5e5;
-  border-radius: 7px;
-  background: #ffffff;
-  color: #18181b;
-  font-size: 13px;
-  font-weight: 600;
+  align-items: flex-start;
+
+  gap: 6px;
+
+  min-height: 75px;
+
+  padding: 17px;
+
+  border: 1px solid #e5e5ea;
+  border-radius: 14px;
+
+  background: #fff;
+
+  color: #222;
+
+  text-align: left;
+
   cursor: pointer;
+
   transition:
-    background 0.2s ease,
-    color 0.2s ease,
     border-color 0.2s ease,
-    transform 0.2s ease;
+    background 0.2s ease,
+    transform 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.chapter-button:hover {
+  border-color: #7138df;
+
+  background: #faf8ff;
+
+  transform: translateY(-2px);
+
+  box-shadow:
+    0 7px 18px rgba(0, 0, 0, 0.06);
+}
+
+.chapter-button span {
+  font-size: 15px;
+  font-weight: 800;
 }
 
 .chapter-button small {
   max-width: 100%;
+
   overflow: hidden;
+
+  color: #888;
+
+  font-size: 12px;
+
   text-overflow: ellipsis;
   white-space: nowrap;
-  color: #777777;
-  font-size: 11px;
-  font-weight: 400;
 }
 
-.chapter-button:hover {
-  border-color: #7c3aed;
-  background: #7c3aed;
-  color: #ffffff;
-  transform: translateY(-1px);
-}
-
-.chapter-button:hover small {
-  color: #ffffff;
-}
 
 /* ========================================
    Empty Chapter
 ======================================== */
 
 .empty-chapter {
-  padding: 45px 20px;
+  padding: 50px 20px;
+
+  border: 1px dashed #ddd;
+  border-radius: 16px;
+
   text-align: center;
-  border: 1px dashed #d4d4d8;
-  border-radius: 10px;
-  background: #fafafa;
 }
 
 .empty-chapter h3 {
   margin: 0 0 8px;
-  color: #18181b;
-  font-size: 18px;
+
+  font-size: 20px;
 }
 
 .empty-chapter p {
   margin: 0;
-  color: #777777;
-  font-size: 14px;
+
+  color: #888;
 }
 
-/* ========================================
-   Folder Modal
-======================================== */
-
-.modal-overlay {
-  position: fixed;
-  inset: 0;
-  z-index: 1000;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 20px;
-  background: rgba(0, 0, 0, 0.45);
-}
-
-.folder-modal {
-  width: 100%;
-  max-width: 500px;
-  max-height: 85vh;
-  overflow-y: auto;
-  padding: 25px;
-  background: #ffffff;
-  border-radius: 14px;
-  box-shadow:
-    0 20px 50px rgba(0, 0, 0, 0.15);
-}
-
-.modal-header {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 20px;
-  margin-bottom: 22px;
-}
-
-.modal-header .section-label {
-  margin-bottom: 5px;
-}
-
-.modal-header h2 {
-  margin: 0;
-  color: #18181b;
-  font-size: 24px;
-}
-
-.modal-close {
-  width: 34px;
-  height: 34px;
-  flex-shrink: 0;
-  border: none;
-  border-radius: 7px;
-  background: #f5f5f5;
-  color: #555555;
-  font-size: 24px;
-  line-height: 1;
-  cursor: pointer;
-}
-
-.modal-close:hover {
-  background: #eeeeee;
-  color: #18181b;
-}
-
-/* ========================================
-   Folder List
-======================================== */
-
-.folder-list {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.folder-option {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 14px;
-  border: 1px solid #e5e5e5;
-  border-radius: 9px;
-  background: #ffffff;
-  cursor: pointer;
-  transition:
-    border-color 0.2s ease,
-    background 0.2s ease;
-}
-
-.folder-option:hover {
-  border-color: #c4b5fd;
-  background: #faf9ff;
-}
-
-.folder-option.selected {
-  border-color: #7c3aed;
-  background: #f5f3ff;
-}
-
-.folder-option input {
-  width: 17px;
-  height: 17px;
-  flex-shrink: 0;
-  accent-color: #7c3aed;
-}
-
-.folder-option-icon {
-  width: 40px;
-  height: 40px;
-  flex-shrink: 0;
-  display: grid;
-  place-items: center;
-  border-radius: 8px;
-  background: #f1ecff;
-  color: #7c3aed;
-  font-weight: 800;
-}
-
-.folder-option-info {
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.folder-option-info strong {
-  overflow: hidden;
-  color: #18181b;
-  font-size: 14px;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.folder-option-info span {
-  color: #777777;
-  font-size: 12px;
-}
-
-/* ========================================
-   Modal Actions
-======================================== */
-
-.modal-actions {
-  display: flex;
-  gap: 10px;
-  margin-top: 22px;
-}
-
-.modal-actions button {
-  flex: 1;
-  min-height: 42px;
-  border-radius: 8px;
-  font-size: 13px;
-  font-weight: 600;
-  cursor: pointer;
-}
-
-.modal-cancel {
-  border: 1px solid #d4d4d8;
-  background: #ffffff;
-  color: #555555;
-}
-
-.modal-cancel:hover {
-  background: #f5f5f5;
-}
-
-.modal-confirm {
-  border: 1px solid #7c3aed;
-  background: #7c3aed;
-  color: #ffffff;
-}
-
-.modal-confirm:hover {
-  background: #6d28d9;
-}
 
 /* ========================================
    Footer
 ======================================== */
 
 .footer {
-  margin-top: 20px;
-  padding: 35px 0;
-  background: #18181b;
-  color: #aaaaaa;
+  border-top: 1px solid #e5e5e5;
+
+  background: #fff;
 }
 
 .footer-inner {
-  width: 86%;
-  max-width: 1300px;
+  width: min(1200px, calc(100% - 40px));
+
   margin: 0 auto;
+
+  padding: 28px 0;
+
   display: flex;
-  flex-direction: column;
-  gap: 8px;
+  align-items: center;
+  justify-content: space-between;
+
+  gap: 20px;
 }
 
 .footer-logo {
-  color: #ffffff;
-  font-size: 25px;
-  font-weight: 800;
+  font-size: 22px;
+  font-weight: 900;
 }
 
 .footer-logo span {
-  color: #7c3aed;
+  color: #7138df;
 }
 
-.footer p {
+.footer-inner p {
   margin: 0;
+
+  color: #888;
+
   font-size: 13px;
 }
+
+
+/* ========================================
+   Modal
+======================================== */
+
+.modal-overlay {
+  position: fixed;
+
+  inset: 0;
+
+  z-index: 1000;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  padding: 20px;
+
+  background: rgba(0, 0, 0, 0.55);
+
+  backdrop-filter: blur(4px);
+}
+
+.folder-modal {
+  width: min(500px, 100%);
+
+  max-height: 85vh;
+
+  overflow: auto;
+
+  background: #fff;
+
+  border-radius: 22px;
+
+  padding: 28px;
+
+  box-shadow:
+    0 25px 70px rgba(0, 0, 0, 0.25);
+}
+
+
+/* Modal Header */
+
+.modal-header {
+  display: flex;
+
+  align-items: flex-start;
+  justify-content: space-between;
+
+  gap: 20px;
+
+  margin-bottom: 25px;
+}
+
+.modal-header h2 {
+  margin: 0;
+
+  font-size: 25px;
+}
+
+.modal-close {
+  width: 36px;
+  height: 36px;
+
+  border: none;
+  border-radius: 50%;
+
+  background: #f2f2f2;
+
+  color: #555;
+
+  font-size: 24px;
+  line-height: 1;
+
+  cursor: pointer;
+}
+
+.modal-close:hover {
+  background: #e9e9e9;
+}
+
+
+/* Folder List */
+
+.folder-list {
+  display: flex;
+  flex-direction: column;
+
+  gap: 10px;
+
+  margin-bottom: 25px;
+}
+
+.folder-option {
+  display: flex;
+  align-items: center;
+
+  gap: 13px;
+
+  padding: 14px;
+
+  border: 1px solid #e5e5e5;
+
+  border-radius: 14px;
+
+  cursor: pointer;
+
+  transition:
+    border-color 0.2s ease,
+    background 0.2s ease;
+}
+
+.folder-option:hover {
+  border-color: #b9a2ee;
+}
+
+.folder-option.selected {
+  border-color: #7138df;
+
+  background: #f7f2ff;
+}
+
+.folder-option input {
+  width: 17px;
+  height: 17px;
+
+  accent-color: #7138df;
+}
+
+.folder-option-icon {
+  width: 38px;
+  height: 38px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  flex-shrink: 0;
+
+  border-radius: 10px;
+
+  background: #eee7ff;
+
+  color: #7138df;
+
+  font-weight: 800;
+}
+
+.folder-option-info {
+  display: flex;
+  flex-direction: column;
+
+  gap: 3px;
+}
+
+.folder-option-info strong {
+  font-size: 14px;
+}
+
+.folder-option-info span {
+  color: #888;
+
+  font-size: 12px;
+}
+
+
+/* Modal Buttons */
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+
+  gap: 10px;
+}
+
+.modal-actions button {
+  min-height: 42px;
+
+  padding: 0 18px;
+
+  border-radius: 10px;
+
+  font-size: 14px;
+  font-weight: 700;
+
+  cursor: pointer;
+}
+
+.modal-cancel {
+  border: 1px solid #ddd;
+
+  background: #fff;
+
+  color: #555;
+}
+
+.modal-confirm {
+  border: none;
+
+  background: #7138df;
+
+  color: #fff;
+}
+
+.modal-confirm:hover {
+  background: #6027cf;
+}
+
 
 /* ========================================
    Not Found
@@ -1153,122 +1466,112 @@ function addMangaToFolder() {
 
 .not-found {
   min-height: 100vh;
+
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 12px;
-  background: #f7f7f8;
-  color: #18181b;
+
+  gap: 15px;
+
+  padding: 30px;
+
+  background: #f7f7f9;
+
+  text-align: center;
 }
 
 .not-found h1 {
   margin: 0;
-  font-size: 32px;
+
+  font-size: 40px;
 }
 
 .not-found p {
   margin: 0;
-  color: #777777;
-  font-size: 14px;
+
+  color: #777;
 }
 
 .not-found button {
-  margin-top: 10px;
-  padding: 10px 18px;
   border: none;
-  border-radius: 8px;
-  background: #7c3aed;
-  color: #ffffff;
-  font-size: 14px;
-  font-weight: 600;
+
+  border-radius: 10px;
+
+  padding: 12px 20px;
+
+  background: #7138df;
+  color: #fff;
+
+  font-weight: 700;
+
   cursor: pointer;
 }
 
-.not-found button:hover {
-  background: #6d28d9;
-}
 
 /* ========================================
    Responsive
 ======================================== */
 
-@media (max-width: 1000px) {
-  .main-content {
-    width: 92%;
-  }
+@media (max-width: 900px) {
 
   .manga-detail {
-    grid-template-columns: 240px 1fr;
+    grid-template-columns: 280px minmax(0, 1fr);
+
     gap: 30px;
-  }
 
-  .chapter-grid {
-    grid-template-columns:
-      repeat(4, minmax(0, 1fr));
-  }
-}
-
-/* ========================================
-   Tablet
-======================================== */
-
-@media (max-width: 750px) {
-  .manga-detail {
-    grid-template-columns: 1fr;
-    gap: 30px;
     padding: 25px;
   }
 
-  .cover-section {
-    max-width: 280px;
-    margin: 0 auto;
-  }
-
-  .manga-info h1 {
-    font-size: 34px;
+  .manga-cover {
+    height: 390px;
   }
 
   .chapter-grid {
     grid-template-columns:
       repeat(3, minmax(0, 1fr));
   }
+
 }
 
-/* ========================================
-   Mobile
-======================================== */
 
-@media (max-width: 600px) {
+@media (max-width: 700px) {
+
   .main-content {
-    width: 92%;
-    padding-top: 25px;
+    width: min(100% - 24px, 600px);
+
+    padding-top: 18px;
   }
 
   .manga-detail {
+    grid-template-columns: 1fr;
+
+    gap: 30px;
+
     padding: 20px;
   }
 
+  .cover-wrapper {
+    max-width: 280px;
+  }
+
+  .manga-cover {
+    height: 390px;
+  }
+
   .manga-info h1 {
-    font-size: 30px;
+    font-size: 34px;
   }
 
   .meta-list {
     grid-template-columns: 1fr;
   }
 
-  .description {
-    font-size: 14px;
-  }
-
   .main-actions {
     flex-direction: column;
-    align-items: stretch;
   }
 
-  .read-button,
-  .bookshelf-button,
-  .folder-button {
+  .main-actions button {
     width: 100%;
   }
 
@@ -1276,43 +1579,32 @@ function addMangaToFolder() {
     padding: 20px;
   }
 
-  .section-heading {
-    align-items: flex-start;
-    gap: 10px;
-  }
-
-  .section-heading h2 {
-    font-size: 24px;
-  }
-
   .chapter-grid {
     grid-template-columns:
       repeat(2, minmax(0, 1fr));
   }
 
-  .folder-modal {
-    padding: 20px;
+  .footer-inner {
+    flex-direction: column;
+
+    align-items: flex-start;
   }
 
-  .footer-inner {
-    width: 92%;
-  }
 }
 
-/* ========================================
-   Small Mobile
-======================================== */
 
-@media (max-width: 400px) {
-  .manga-info h1 {
-    font-size: 27px;
-  }
+@media (max-width: 430px) {
 
   .chapter-grid {
     grid-template-columns: 1fr;
   }
 
-  .chapter-button {
-    min-height: 40px;
+  .section-heading {
+    align-items: flex-start;
+
+    flex-direction: column;
   }
-}</style>
+
+}
+
+</style>

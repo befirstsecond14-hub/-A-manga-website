@@ -10,7 +10,7 @@ export class ReadingHistory {
     userId: number,
     mangaId: number,
     chapterId: number,
-    readAt: Date = new Date()
+    readAt: Date = new Date(),
   ) {
     this.id = id
     this.userId = userId

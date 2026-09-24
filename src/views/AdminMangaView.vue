@@ -992,25 +992,6 @@ async function saveChapter() {
 function deleteChapter(
   chapterId: number
 ) {
-  const chapter =
-    chapters.value.find(
-      (item) =>
-        item.id === chapterId
-    )
-
-  if (!chapter) {
-    return
-  }
-
-  const confirmed =
-    window.confirm(
-      `ต้องการลบตอนที่ ${chapter.number} ใช่หรือไม่?`
-    )
-
-  if (!confirmed) {
-    return
-  }
-
   const index =
     chapters.value.findIndex(
       (item) =>
