@@ -1,6 +1,9 @@
 <script setup lang="ts">
+
 import { ref, onMounted } from 'vue'
-import { MangaService } from '../services/MangaService'
+
+import { MangaService } from '@/services/mangaService'
+
 import type { Manga } from '../models/Manga'
 
 const mangaService = new MangaService()
@@ -14,6 +17,7 @@ function loadManga() {
 onMounted(() => {
   loadManga()
 })
+
 </script>
 
 <template>

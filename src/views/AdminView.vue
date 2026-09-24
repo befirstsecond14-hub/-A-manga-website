@@ -2,7 +2,7 @@
 import { computed, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { Manga } from '../models/Manga'
-import { MangaService } from '../services/MangaService'
+import { MangaService } from '@/services/mangaService'
 
 const router = useRouter()
 const mangaService = new MangaService()

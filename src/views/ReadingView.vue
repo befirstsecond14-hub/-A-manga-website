@@ -9,7 +9,7 @@ import {
   useRouter,
 } from 'vue-router'
 
-import { MangaService } from '../services/MangaService'
+import { MangaService } from '@/services/mangaService'
 import { useBookshelfStore } from '@/stores/bookshelf'
 
 interface AdminChapter {

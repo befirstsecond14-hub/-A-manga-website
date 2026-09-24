@@ -4,7 +4,7 @@ import { useRoute, useRouter } from 'vue-router'
 
 import { useBookshelfStore } from '@/stores/bookshelf'
 import { useCustomCategoryStore } from '@/stores/customCategory'
-import { MangaService } from '@/services/MangaService'
+import { MangaService } from '@/services/mangaService'
 
 interface AdminChapter {
   id: number

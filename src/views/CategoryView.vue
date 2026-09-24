@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { useRoute } from 'vue-router'
-import { MangaService } from '@/services/MangaService'
+import { MangaService } from '@/services/mangaService'
 
 const route = useRoute()
 const mangaService = new MangaService()

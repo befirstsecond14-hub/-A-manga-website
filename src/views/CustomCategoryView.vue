@@ -3,7 +3,7 @@ import { computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 
 import { useCustomCategoryStore } from '@/stores/customCategory'
-import { MangaService } from '@/services/MangaService'
+import { MangaService } from '@/services/mangaService'
 
 const route = useRoute()
 const router = useRouter()
