@@ -1,18 +1,18 @@
 export class CustomCategory {
-  categoryId: number
+  id: number
   userId: number
-  selected: boolean
+  name: string
   createdAt: Date
 
   constructor(
-    categoryId: number,
+    id: number,
     userId: number,
-    selected: boolean = false,
+    name: string,
     createdAt: Date = new Date()
   ) {
-    this.categoryId = categoryId
+    this.id = id
     this.userId = userId
-    this.selected = selected
+    this.name = name
     this.createdAt = createdAt
   }
 }
