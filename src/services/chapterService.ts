@@ -1,60 +1,43 @@
-import { Chapter } from '../models/Chapter'
-import { ChapterImage } from '../models/ChapterImage'
-
-interface StoredChapter {
+export interface ChapterData {
   id: number
   mangaId: number
   chapterNumber: number
   title: string
+  images: string[]
 }
 
-interface StoredChapterImage {
-  id: number
-  chapterId: number
-  imageUrl: string
-  imageOrder: number
-}
+const STORAGE_PREFIX =
+  'mangaverse_chapters_'
 
 export class ChapterService {
-  private chapters: Chapter[]
-  private chapterImages: ChapterImage[]
+  /* =========================
+     Storage Key
+  ========================= */
 
-  private getChapterStorageKey(
+  private getStorageKey(
     mangaId: number,
   ): string {
-    return `mangaverse_chapters_${mangaId}`
+    return `${STORAGE_PREFIX}${mangaId}`
   }
 
-  private getImageStorageKey(
-    chapterId: number,
-  ): string {
-    return `mangaverse_chapter_images_${chapterId}`
-  }
-
-  constructor() {
-    this.chapters = []
-    this.chapterImages = []
-  }
-
-  // ========================================
-  // CHAPTER - LOAD
-  // ========================================
+  /* =========================
+     Load Chapters
+  ========================= */
 
   private loadChapters(
     mangaId: number,
-  ): Chapter[] {
-    const storageKey =
-      this.getChapterStorageKey(mangaId)
-
+  ): ChapterData[] {
     const saved =
-      localStorage.getItem(storageKey)
+      localStorage.getItem(
+        this.getStorageKey(mangaId),
+      )
 
     if (!saved) {
       return []
     }
 
     try {
-      const parsed: unknown =
+      const parsed =
         JSON.parse(saved)
 
       if (!Array.isArray(parsed)) {
@@ -62,29 +45,58 @@ export class ChapterService {
       }
 
       return parsed
-        .map((item: unknown) => {
-          const chapter =
-            item as Partial<StoredChapter>
+        .map((chapter) => {
+          const images =
+            Array.isArray(
+              chapter.images,
+            )
+              ? chapter.images
+                  .map((image: unknown) =>
+                    String(image),
+                  )
+                  .filter(
+                    (image: string) =>
+                      image.length > 0,
+                  )
+              : []
 
-          return new Chapter(
-            Number(chapter.id),
-            Number(chapter.mangaId),
-            Number(chapter.chapterNumber),
-            String(chapter.title ?? ''),
-          )
+          return {
+            id: Number(
+              chapter.id,
+            ),
+
+            mangaId:
+              Number(
+                chapter.mangaId ??
+                  mangaId,
+              ),
+
+            chapterNumber:
+              Number(
+                chapter.chapterNumber ??
+                  chapter.number ??
+                  0,
+              ),
+
+            title: String(
+              chapter.title ?? '',
+            ),
+
+            images,
+          }
         })
-        .filter((chapter) => {
-          return (
-            Number.isFinite(chapter.id) &&
-            Number.isFinite(chapter.mangaId) &&
+        .filter(
+          (chapter) =>
+            Number.isFinite(
+              chapter.id,
+            ) &&
             Number.isFinite(
               chapter.chapterNumber,
-            )
-          )
-        })
+            ),
+        )
     } catch (error) {
       console.error(
-        'ไม่สามารถโหลดข้อมูล Chapter ได้',
+        'ไม่สามารถโหลด Chapter ได้:',
         error,
       )
 
@@ -92,33 +104,24 @@ export class ChapterService {
     }
   }
 
-  // ========================================
-  // CHAPTER - SAVE
-  // ========================================
+  /* =========================
+     Save Chapters
+  ========================= */
 
   private saveChapters(
     mangaId: number,
-    chapters: Chapter[],
+    chapters: ChapterData[],
   ): boolean {
     try {
-      const data: StoredChapter[] =
-        chapters.map((chapter) => ({
-          id: chapter.id,
-          mangaId: chapter.mangaId,
-          chapterNumber:
-            chapter.chapterNumber,
-          title: chapter.title,
-        }))
-
       localStorage.setItem(
-        this.getChapterStorageKey(mangaId),
-        JSON.stringify(data),
+        this.getStorageKey(mangaId),
+        JSON.stringify(chapters),
       )
 
       return true
     } catch (error) {
       console.error(
-        'ไม่สามารถบันทึกข้อมูล Chapter ได้',
+        'ไม่สามารถบันทึก Chapter ได้:',
         error,
       )
 
@@ -126,55 +129,27 @@ export class ChapterService {
     }
   }
 
-  // ========================================
-  // CHAPTER - CREATE
-  // ========================================
+  /* =========================
+     Get Chapters By Manga
+  ========================= */
 
-  createChapter(
-    chapter: Chapter,
-  ): boolean {
-    const chapters =
-      this.loadChapters(chapter.mangaId)
-
-    const duplicate =
-      chapters.some(
-        (item) =>
-          item.chapterNumber ===
-          chapter.chapterNumber,
-      )
-
-    if (duplicate) {
-      return false
-    }
-
-    chapters.push(chapter)
-
-    return this.saveChapters(
-      chapter.mangaId,
-      chapters,
+  getByMangaId(
+    mangaId: number,
+  ): ChapterData[] {
+    return this.loadChapters(
+      mangaId,
     )
   }
 
-  // ========================================
-  // CHAPTER - READ ALL
-  // ========================================
+  /* =========================
+     Get Chapter By ID
+  ========================= */
 
-  getAllChapters(
-    mangaId: number,
-  ): Chapter[] {
-    return this.loadChapters(mangaId)
-  }
-
-  // ========================================
-  // CHAPTER - READ BY ID
-  // ========================================
-
-  getChapterById(
-    mangaId: number,
+  getById(
     chapterId: number,
-  ): Chapter | undefined {
+  ): ChapterData | undefined {
     const chapters =
-      this.loadChapters(mangaId)
+      this.getAllChapters()
 
     return chapters.find(
       (chapter) =>
@@ -182,68 +157,99 @@ export class ChapterService {
     )
   }
 
-  // ========================================
-  // CHAPTER - UPDATE
-  // ========================================
+  /* =========================
+     Get All Chapters
+  ========================= */
 
-  updateChapter(
-    chapter: Chapter,
-  ): boolean {
-    const chapters =
-      this.loadChapters(chapter.mangaId)
+  private getAllChapters(): ChapterData[] {
+    const allChapters: ChapterData[] =
+      []
 
-    const index =
-      chapters.findIndex(
-        (item) =>
-          item.id === chapter.id,
+    for (
+      let index = 0;
+      index < localStorage.length;
+      index++
+    ) {
+      const key =
+        localStorage.key(index)
+
+      if (
+        !key ||
+        !key.startsWith(
+          STORAGE_PREFIX,
+        )
+      ) {
+        continue
+      }
+
+      const mangaId =
+        Number(
+          key.replace(
+            STORAGE_PREFIX,
+            '',
+          ),
+        )
+
+      if (
+        !Number.isFinite(
+          mangaId,
+        )
+      ) {
+        continue
+      }
+
+      const chapters =
+        this.loadChapters(
+          mangaId,
+        )
+
+      allChapters.push(
+        ...chapters,
       )
-
-    if (index === -1) {
-      return false
     }
 
+    return allChapters
+  }
+
+  /* =========================
+     Create Chapter
+  ========================= */
+
+  create(
+    mangaId: number,
+    chapterNumber: number,
+    title: string,
+    images: string[] = [],
+  ): ChapterData | null {
+    const chapters =
+      this.loadChapters(
+        mangaId,
+      )
+
+    /* ป้องกันเลขตอนซ้ำ */
     const duplicate =
       chapters.some(
-        (item) =>
-          item.id !== chapter.id &&
-          item.chapterNumber ===
-            chapter.chapterNumber,
+        (chapter) =>
+          chapter.chapterNumber ===
+          chapterNumber,
       )
 
     if (duplicate) {
-      return false
+      return null
     }
 
-    chapters[index] = chapter
+    const newChapter: ChapterData =
+      {
+        id: Date.now(),
+        mangaId,
+        chapterNumber,
+        title: title.trim(),
+        images: [...images],
+      }
 
-    return this.saveChapters(
-      chapter.mangaId,
-      chapters,
+    chapters.push(
+      newChapter,
     )
-  }
-
-  // ========================================
-  // CHAPTER - DELETE
-  // ========================================
-
-  deleteChapter(
-    mangaId: number,
-    chapterId: number,
-  ): boolean {
-    const chapters =
-      this.loadChapters(mangaId)
-
-    const index =
-      chapters.findIndex(
-        (chapter) =>
-          chapter.id === chapterId,
-      )
-
-    if (index === -1) {
-      return false
-    }
-
-    chapters.splice(index, 1)
 
     const saved =
       this.saveChapters(
@@ -252,219 +258,145 @@ export class ChapterService {
       )
 
     if (!saved) {
-      return false
+      return null
     }
 
-    // ลบข้อมูลรูปของ Chapter นี้ด้วย
-    this.deleteChapterImages(chapterId)
-
-    return true
+    return newChapter
   }
 
-  // ========================================
-  // CHAPTER IMAGE - LOAD
-  // ========================================
+  /* =========================
+     Update Chapter
+  ========================= */
 
-  private loadChapterImages(
-    chapterId: number,
-  ): ChapterImage[] {
-    const storageKey =
-      this.getImageStorageKey(chapterId)
-
-    const saved =
-      localStorage.getItem(storageKey)
-
-    if (!saved) {
-      return []
-    }
-
-    try {
-      const parsed: unknown =
-        JSON.parse(saved)
-
-      if (!Array.isArray(parsed)) {
-        return []
-      }
-
-      return parsed
-        .map((item: unknown) => {
-          const image =
-            item as Partial<StoredChapterImage>
-
-          return new ChapterImage(
-            Number(image.id),
-            Number(image.chapterId),
-            String(
-              image.imageUrl ?? '',
-            ),
-            Number(
-              image.imageOrder ?? 0,
-            ),
-          )
-        })
-        .filter((image) => {
-          return (
-            Number.isFinite(image.id) &&
-            Number.isFinite(
-              image.chapterId,
-            ) &&
-            Number.isFinite(
-              image.imageOrder,
-            )
-          )
-        })
-        .sort(
-          (a, b) =>
-            a.imageOrder -
-            b.imageOrder,
-        )
-    } catch (error) {
-      console.error(
-        'ไม่สามารถโหลดข้อมูลรูป Chapter ได้',
-        error,
-      )
-
-      return []
-    }
-  }
-
-  // ========================================
-  // CHAPTER IMAGE - SAVE
-  // ========================================
-
-  private saveChapterImages(
-    chapterId: number,
-    images: ChapterImage[],
+  update(
+    updatedChapter: ChapterData,
   ): boolean {
-    try {
-      const data: StoredChapterImage[] =
-        images.map((image) => ({
-          id: image.id,
-          chapterId: image.chapterId,
-          imageUrl: image.imageUrl,
-          imageOrder: image.imageOrder,
-        }))
-
-      localStorage.setItem(
-        this.getImageStorageKey(
-          chapterId,
-        ),
-        JSON.stringify(data),
-      )
-
-      return true
-    } catch (error) {
-      console.error(
-        'ไม่สามารถบันทึกข้อมูลรูป Chapter ได้',
-        error,
-      )
-
-      return false
-    }
-  }
-
-  // ========================================
-  // CHAPTER IMAGE - CREATE
-  // ========================================
-
-  addChapterImage(
-    image: ChapterImage,
-  ): boolean {
-    const images =
-      this.loadChapterImages(
-        image.chapterId,
-      )
-
-    images.push(image)
-
-    const saved =
-      this.saveChapterImages(
-        image.chapterId,
-        images,
-      )
-
-    if (!saved) {
-      return false
-    }
-
-    this.chapterImages =
-      images
-
-    return true
-  }
-
-  // ========================================
-  // CHAPTER IMAGE - READ
-  // ========================================
-
-  getChapterImages(
-    chapterId: number,
-  ): ChapterImage[] {
-    const images =
-      this.loadChapterImages(
-        chapterId,
-      )
-
-    this.chapterImages =
-      images
-
-    return [...images]
-  }
-
-  // ========================================
-  // CHAPTER IMAGE - DELETE
-  // ========================================
-
-  deleteChapterImage(
-    chapterId: number,
-    imageId: number,
-  ): boolean {
-    const images =
-      this.loadChapterImages(
-        chapterId,
+    const chapters =
+      this.loadChapters(
+        updatedChapter.mangaId,
       )
 
     const index =
-      images.findIndex(
-        (image) =>
-          image.id === imageId,
+      chapters.findIndex(
+        (chapter) =>
+          chapter.id ===
+          updatedChapter.id,
       )
 
     if (index === -1) {
       return false
     }
 
-    images.splice(index, 1)
-
-    const saved =
-      this.saveChapterImages(
-        chapterId,
-        images,
+    /* ป้องกันเลขตอนซ้ำ */
+    const duplicate =
+      chapters.some(
+        (chapter) =>
+          chapter.id !==
+            updatedChapter.id &&
+          chapter.chapterNumber ===
+            updatedChapter.chapterNumber,
       )
 
-    if (!saved) {
+    if (duplicate) {
       return false
     }
 
-    this.chapterImages =
-      images
+    chapters[index] = {
+      id: updatedChapter.id,
+      mangaId:
+        updatedChapter.mangaId,
+      chapterNumber:
+        updatedChapter.chapterNumber,
+      title:
+        updatedChapter.title.trim(),
+      images: [
+        ...updatedChapter.images,
+      ],
+    }
 
-    return true
+    return this.saveChapters(
+      updatedChapter.mangaId,
+      chapters,
+    )
   }
 
-  // ========================================
-  // CHAPTER IMAGE - DELETE ALL
-  // ========================================
+  /* =========================
+     Delete Chapter
+  ========================= */
 
-  private deleteChapterImages(
+  delete(
     chapterId: number,
-  ): void {
-    localStorage.removeItem(
-      this.getImageStorageKey(
+  ): boolean {
+    const chapter =
+      this.getById(
         chapterId,
-      ),
+      )
+
+    if (!chapter) {
+      return false
+    }
+
+    const chapters =
+      this.loadChapters(
+        chapter.mangaId,
+      )
+
+    const index =
+      chapters.findIndex(
+        (item) =>
+          item.id ===
+          chapterId,
+      )
+
+    if (index === -1) {
+      return false
+    }
+
+    chapters.splice(
+      index,
+      1,
     )
 
-    this.chapterImages = []
+    return this.saveChapters(
+      chapter.mangaId,
+      chapters,
+    )
+  }
+
+  /* =========================
+     Latest Chapter
+  ========================= */
+
+  getLatestChapter(
+    mangaId: number,
+  ): ChapterData | undefined {
+    const chapters =
+      this.loadChapters(
+        mangaId,
+      )
+
+    if (
+      chapters.length === 0
+    ) {
+      return undefined
+    }
+
+    return [...chapters].sort(
+      (a, b) =>
+        b.chapterNumber -
+        a.chapterNumber,
+    )[0]
+  }
+
+  /* =========================
+     Chapter Count
+  ========================= */
+
+  getChapterCount(
+    mangaId: number,
+  ): number {
+    return this.loadChapters(
+      mangaId,
+    ).length
   }
 }

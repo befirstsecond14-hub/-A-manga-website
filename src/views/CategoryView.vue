@@ -4,6 +4,7 @@ import { useRoute } from 'vue-router'
 import { MangaService } from '@/services/mangaService'
 
 const route = useRoute()
+
 const mangaService = new MangaService()
 
 // ========================================
@@ -11,14 +12,15 @@ const mangaService = new MangaService()
 // ========================================
 
 const searchText = ref(
-  String(route.query.search ?? '')
+  String(route.query.search ?? ''),
 )
 
 // ========================================
 // Category
 // ========================================
 
-const selectedCategory = ref('ทั้งหมด')
+const selectedCategory =
+  ref('ทั้งหมด')
 
 // ========================================
 // Manga Data
@@ -29,17 +31,59 @@ const mangaList = computed(() => {
 })
 
 // ========================================
+// Parse Categories
+// แยก "Action, Fantasy, Romance"
+// ออกเป็น ["Action", "Fantasy", "Romance"]
+// ========================================
+
+function parseCategories(
+  category: string,
+): string[] {
+  return category
+    .split(',')
+    .map((item) => item.trim())
+    .filter(Boolean)
+}
+
+// ========================================
 // Category List
 // ========================================
 
 const categories = computed(() => {
-  const categoryList = mangaList.value.map(
-    (manga) => manga.category
+  const categorySet =
+    new Set<string>()
+
+  mangaList.value.forEach(
+    (manga) => {
+      const mangaCategories =
+        parseCategories(
+          manga.category,
+        )
+
+      mangaCategories.forEach(
+        (category) => {
+          categorySet.add(
+            category,
+          )
+        },
+      )
+    },
   )
 
   return [
     'ทั้งหมด',
-    ...new Set(categoryList),
+    ...Array.from(
+      categorySet,
+    ).sort((a, b) =>
+      a.localeCompare(
+        b,
+        'en',
+        {
+          sensitivity:
+            'base',
+        },
+      ),
+    ),
   ]
 })
 
@@ -47,39 +91,68 @@ const categories = computed(() => {
 // Filter Manga
 // ========================================
 
-const filteredManga = computed(() => {
-  const keyword =
-    searchText.value
-      .trim()
-      .toLowerCase()
-
-  return mangaList.value.filter((manga) => {
-
-    // ค้นหาจากชื่อเรื่อง / ผู้เขียน / หมวดหมู่
-    const matchSearch =
-      !keyword ||
-      manga.title
+const filteredManga =
+  computed(() => {
+    const keyword =
+      searchText.value
+        .trim()
         .toLowerCase()
-        .includes(keyword) ||
-      manga.author
-        .toLowerCase()
-        .includes(keyword) ||
-      manga.category
-        .toLowerCase()
-        .includes(keyword)
 
-    // กรองหมวดหมู่
-    const matchCategory =
-      selectedCategory.value === 'ทั้งหมด' ||
-      manga.category ===
-        selectedCategory.value
+    return mangaList.value.filter(
+      (manga) => {
+        // -------------------------------
+        // Search
+        // -------------------------------
 
-    return (
-      matchSearch &&
-      matchCategory
+        const matchSearch =
+          !keyword ||
+          manga.title
+            .toLowerCase()
+            .includes(keyword) ||
+          manga.author
+            .toLowerCase()
+            .includes(keyword) ||
+          manga.category
+            .toLowerCase()
+            .includes(keyword)
+
+        // -------------------------------
+        // Category
+        // -------------------------------
+
+        const mangaCategories =
+          parseCategories(
+            manga.category,
+          )
+
+        const matchCategory =
+          selectedCategory.value ===
+            'ทั้งหมด' ||
+          mangaCategories.some(
+            (category) =>
+              category.toLowerCase() ===
+              selectedCategory.value.toLowerCase(),
+          )
+
+        return (
+          matchSearch &&
+          matchCategory
+        )
+      },
     )
   })
-})
+
+// ========================================
+// Display Categories
+// ========================================
+
+function displayCategories(
+  category: string,
+): string[] {
+  return parseCategories(
+    category,
+  )
+}
 </script>
 
 <template>
@@ -91,9 +164,13 @@ const filteredManga = computed(() => {
            Header
       ======================================== -->
 
-      <section class="page-header">
+      <section
+        class="page-header"
+      >
 
-        <p class="section-label">
+        <p
+          class="section-label"
+        >
           MANGA COLLECTION
         </p>
 
@@ -111,7 +188,9 @@ const filteredManga = computed(() => {
            Search
       ======================================== -->
 
-      <section class="search-section">
+      <section
+        class="search-section"
+      >
 
         <input
           v-model="searchText"
@@ -125,7 +204,9 @@ const filteredManga = computed(() => {
            Category Filter
       ======================================== -->
 
-      <section class="category-filter">
+      <section
+        class="category-filter"
+      >
 
         <button
           v-for="category in categories"
@@ -133,10 +214,12 @@ const filteredManga = computed(() => {
           type="button"
           :class="{
             active:
-              selectedCategory === category
+              selectedCategory ===
+              category,
           }"
           @click="
-            selectedCategory = category
+            selectedCategory =
+              category
           "
         >
           {{ category }}
@@ -148,14 +231,17 @@ const filteredManga = computed(() => {
            Result Header
       ======================================== -->
 
-      <section class="result-header">
+      <section
+        class="result-header"
+      >
 
         <h2>
           มังงะ
         </h2>
 
         <span>
-          {{ filteredManga.length }} เรื่อง
+          {{ filteredManga.length }}
+          เรื่อง
         </span>
 
       </section>
@@ -165,18 +251,26 @@ const filteredManga = computed(() => {
       ======================================== -->
 
       <section
-        v-if="filteredManga.length > 0"
+        v-if="
+          filteredManga.length > 0
+        "
         class="manga-grid"
       >
 
         <RouterLink
-          v-for="manga in filteredManga"
+          v-for="
+            manga in filteredManga
+          "
           :key="manga.id"
           :to="`/manga/${manga.id}`"
           class="manga-card"
         >
 
-          <div class="cover-wrapper">
+          <!-- Cover -->
+
+          <div
+            class="cover-wrapper"
+          >
 
             <img
               :src="manga.cover"
@@ -186,11 +280,32 @@ const filteredManga = computed(() => {
 
           </div>
 
-          <div class="card-content">
+          <!-- Card Content -->
 
-            <span class="category">
-              {{ manga.category }}
-            </span>
+          <div
+            class="card-content"
+          >
+
+            <!-- แสดงแต่ละหมวดแยกกัน -->
+
+            <div
+              class="category-list"
+            >
+
+              <span
+                v-for="
+                  category in
+                  displayCategories(
+                    manga.category,
+                  )
+                "
+                :key="category"
+                class="category"
+              >
+                {{ category }}
+              </span>
+
+            </div>
 
             <h3>
               {{ manga.title }}
@@ -201,7 +316,8 @@ const filteredManga = computed(() => {
             </p>
 
             <small>
-              ตอนล่าสุด {{ manga.latestChapter }}
+              ตอนล่าสุด
+              {{ manga.latestChapter }}
             </small>
 
           </div>
@@ -236,14 +352,15 @@ const filteredManga = computed(() => {
 </template>
 
 <style scoped>
-
 /* ========================================
    Category Page
 ======================================== */
 
 .category-page {
   min-height: 100vh;
+
   background: #f7f7f8;
+
   color: #18181b;
 }
 
@@ -253,8 +370,11 @@ const filteredManga = computed(() => {
 
 .main-content {
   width: 86%;
+
   max-width: 1300px;
+
   margin: 0 auto;
+
   padding: 45px 0 70px;
 }
 
@@ -268,22 +388,31 @@ const filteredManga = computed(() => {
 
 .section-label {
   margin: 0 0 7px;
+
   color: #7c3aed;
+
   font-size: 12px;
+
   font-weight: 700;
+
   letter-spacing: 1.5px;
 }
 
 .page-header h1 {
   margin: 0 0 8px;
+
   color: #18181b;
+
   font-size: 38px;
+
   font-weight: 800;
 }
 
 .page-header p:last-child {
   margin: 0;
+
   color: #777777;
+
   font-size: 14px;
 }
 
@@ -297,15 +426,25 @@ const filteredManga = computed(() => {
 
 .search-section input {
   width: 100%;
+
   height: 46px;
+
   box-sizing: border-box;
+
   padding: 0 15px;
+
   border: 1px solid #d4d4d8;
+
   border-radius: 9px;
+
   outline: none;
+
   background: #ffffff;
+
   color: #18181b;
+
   font-size: 14px;
+
   transition:
     border-color 0.2s ease,
     box-shadow 0.2s ease;
@@ -313,6 +452,7 @@ const filteredManga = computed(() => {
 
 .search-section input:focus {
   border-color: #7c3aed;
+
   box-shadow:
     0 0 0 3px
     rgba(124, 58, 237, 0.08);
@@ -328,19 +468,29 @@ const filteredManga = computed(() => {
 
 .category-filter {
   display: flex;
+
   flex-wrap: wrap;
+
   gap: 8px;
+
   margin-bottom: 35px;
 }
 
 .category-filter button {
   padding: 9px 16px;
+
   border: 1px solid #d4d4d8;
+
   border-radius: 8px;
+
   background: #ffffff;
+
   color: #555555;
+
   font-size: 13px;
+
   cursor: pointer;
+
   transition:
     background 0.2s ease,
     color 0.2s ease,
@@ -349,12 +499,15 @@ const filteredManga = computed(() => {
 
 .category-filter button:hover {
   border-color: #7c3aed;
+
   color: #7c3aed;
 }
 
 .category-filter button.active {
   border-color: #7c3aed;
+
   background: #7c3aed;
+
   color: #ffffff;
 }
 
@@ -364,20 +517,27 @@ const filteredManga = computed(() => {
 
 .result-header {
   display: flex;
+
   align-items: center;
+
   justify-content: space-between;
+
   margin-bottom: 18px;
 }
 
 .result-header h2 {
   margin: 0;
+
   color: #18181b;
+
   font-size: 24px;
+
   font-weight: 800;
 }
 
 .result-header span {
   color: #777777;
+
   font-size: 13px;
 }
 
@@ -387,8 +547,10 @@ const filteredManga = computed(() => {
 
 .manga-grid {
   display: grid;
+
   grid-template-columns:
     repeat(4, minmax(0, 1fr));
+
   gap: 20px;
 }
 
@@ -398,11 +560,17 @@ const filteredManga = computed(() => {
 
 .manga-card {
   overflow: hidden;
+
   border: 1px solid #e5e5e5;
+
   border-radius: 12px;
+
   background: #ffffff;
+
   color: inherit;
+
   text-decoration: none;
+
   transition:
     transform 0.2s ease,
     box-shadow 0.2s ease;
@@ -410,6 +578,7 @@ const filteredManga = computed(() => {
 
 .manga-card:hover {
   transform: translateY(-3px);
+
   box-shadow:
     0 8px 25px
     rgba(0, 0, 0, 0.08);
@@ -421,14 +590,19 @@ const filteredManga = computed(() => {
 
 .cover-wrapper {
   aspect-ratio: 3 / 4;
+
   overflow: hidden;
+
   background: #eeeeee;
 }
 
 .cover {
   width: 100%;
+
   height: 100%;
+
   display: block;
+
   object-fit: cover;
 }
 
@@ -440,27 +614,57 @@ const filteredManga = computed(() => {
   padding: 15px;
 }
 
+/* ========================================
+   Category List
+======================================== */
+
+.category-list {
+  display: flex;
+
+  flex-wrap: wrap;
+
+  gap: 5px;
+
+  margin-bottom: 7px;
+}
+
 .category {
+  display: inline-block;
+
+  padding: 4px 7px;
+
+  border-radius: 5px;
+
+  background: #ede9fe;
+
   color: #7c3aed;
-  font-size: 11px;
+
+  font-size: 10px;
+
   font-weight: 700;
 }
 
 .card-content h3 {
   margin: 6px 0;
+
   color: #18181b;
+
   font-size: 17px;
+
   font-weight: 700;
 }
 
 .card-content p {
   margin: 0 0 5px;
+
   color: #777777;
+
   font-size: 12px;
 }
 
 .card-content small {
   color: #999999;
+
   font-size: 11px;
 }
 
@@ -470,21 +674,29 @@ const filteredManga = computed(() => {
 
 .empty-result {
   padding: 70px 20px;
+
   text-align: center;
+
   border: 1px dashed #d4d4d8;
+
   border-radius: 12px;
+
   background: #ffffff;
 }
 
 .empty-result h2 {
   margin: 0 0 8px;
+
   color: #18181b;
+
   font-size: 20px;
 }
 
 .empty-result p {
   margin: 0;
+
   color: #777777;
+
   font-size: 14px;
 }
 
@@ -493,7 +705,6 @@ const filteredManga = computed(() => {
 ======================================== */
 
 @media (max-width: 1000px) {
-
   .main-content {
     width: 92%;
   }
@@ -509,7 +720,6 @@ const filteredManga = computed(() => {
 ======================================== */
 
 @media (max-width: 700px) {
-
   .manga-grid {
     grid-template-columns:
       repeat(2, minmax(0, 1fr));
@@ -525,7 +735,6 @@ const filteredManga = computed(() => {
 ======================================== */
 
 @media (max-width: 450px) {
-
   .manga-grid {
     grid-template-columns: 1fr;
   }
@@ -534,5 +743,4 @@ const filteredManga = computed(() => {
     font-size: 29px;
   }
 }
-
 </style>
