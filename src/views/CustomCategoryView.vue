@@ -34,7 +34,9 @@ const mangaList = computed(() => {
         Number(mangaId),
       )
     })
-    .filter((manga) => manga !== undefined)
+    .filter(
+      (manga) => manga !== undefined,
+    )
 })
 
 function goBack() {
@@ -66,6 +68,7 @@ function removeFromCategory(
   <div class="category-page">
     <div class="category-header">
       <button
+        type="button"
         class="back-button"
         @click="goBack"
       >
@@ -102,7 +105,11 @@ function removeFromCategory(
       >
         <div
           class="manga-cover"
-          @click="openManga(Number(manga.id))"
+          @click="
+            openManga(
+              Number(manga.id),
+            )
+          "
         >
           <img
             :src="manga.cover"
@@ -111,9 +118,12 @@ function removeFromCategory(
         </div>
 
         <div class="manga-info">
-          <h3>{{ manga.title }}</h3>
+          <h3>
+            {{ manga.title }}
+          </h3>
 
           <button
+            type="button"
             class="remove-button"
             @click="
               removeFromCategory(
